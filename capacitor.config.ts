@@ -7,6 +7,11 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: '#0e3b2a',
   },
+  plugins: {
+    SystemBars: {
+      insetsHandling: 'css',
+    },
+  },
 };
 
 export default config;

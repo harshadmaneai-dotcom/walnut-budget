@@ -114,16 +114,14 @@ export function Landing({ signedIn, onSignIn, onCreate, onOpenBudget }: LandingP
           <a
             className="btn primary"
             href={isAndroid ? ANDROID_DOWNLOAD_URL : DESKTOP_DOWNLOAD_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+            {...(isAndroid ? { download: true } : { target: '_blank', rel: 'noopener noreferrer' })}
           >
             Download for {isAndroid ? 'Android' : 'Windows'}
           </a>
           <a
             className="btn"
             href={isAndroid ? DESKTOP_DOWNLOAD_URL : ANDROID_DOWNLOAD_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+            {...(isAndroid ? { target: '_blank', rel: 'noopener noreferrer' } : { download: true })}
           >
             {isAndroid ? 'Windows version' : 'Android app (APK)'}
           </a>

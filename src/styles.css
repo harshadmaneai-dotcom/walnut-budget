@@ -408,7 +408,11 @@ label {
 
 /* ---------- Responsive: phone ---------- */
 @media (max-width: 760px) {
-  .app { display: flex; flex-direction: column; }
+  /* Android 16 (targetSdk 36) draws edge-to-edge: keep the header below the status bar. */
+  .app {
+    display: flex; flex-direction: column;
+    padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  }
   .rail {
     position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom));
     top: auto; height: auto; z-index: 40; padding: 0; flex-direction: row; justify-content: center;
@@ -570,7 +574,7 @@ textarea:focus-visible {
 }
 
 @media (max-width: 760px) {
-  .sync-banner { top: 10px; width: calc(100vw - 20px); }
+  .sync-banner { top: calc(10px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); width: calc(100vw - 20px); }
   .sync-text span { max-width: none; }
 }
 
