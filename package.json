@@ -1,7 +1,7 @@
 {
   "name": "walnut",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,13 @@
   "build": {
     "appId": "app.walnut.desktop",
     "productName": "Walnut",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "harshadmaneai-dotcom",
+        "repo": "walnut-budget"
+      }
+    ],
     "directories": {
       "output": "release"
     },
@@ -44,6 +51,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
+    "electron-updater": "^6.8.11",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

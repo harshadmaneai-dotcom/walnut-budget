@@ -811,4 +811,27 @@ textarea:focus-visible {
   }
 }
 
+/* ---------- Desktop update notice ---------- */
+.update-banner {
+  position: fixed; right: 20px; bottom: 20px; z-index: 80;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  max-width: min(420px, calc(100vw - 32px));
+  background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+  padding: 14px 16px; box-shadow: 0 24px 48px -28px rgba(11, 26, 20, .55);
+  animation: modal-in .22s cubic-bezier(.2, .8, .3, 1) both;
+}
+.update-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 190px; }
+.update-text strong { font-size: 14px; }
+.update-text span { font-size: 13px; color: var(--muted); }
+.update-progress { flex: 1 1 120px; height: 6px; border-radius: 999px; background: #edf1e4; overflow: hidden; }
+.update-progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--lime)); transition: width .2s ease; }
+.update-dismiss {
+  border: none; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 18px; line-height: 1; padding: 2px 4px; border-radius: 8px;
+}
+.update-dismiss:hover { background: var(--green-soft); color: var(--green-dark); }
+@media (max-width: 560px) {
+  .update-banner { left: 12px; right: 12px; bottom: 88px; max-width: none; }
+}
+
 /* END */

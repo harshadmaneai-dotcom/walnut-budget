@@ -73,6 +73,26 @@ function measure(selector: string): Box | null {
   return { top: r.top, left: r.left, width: r.width, height: r.height };
 }
 
+/** Tall targets (a whole settings card) can't be framed by one screen; cap the hole so it stays visible. */
+function clampBox(b: Box | null): Box | null {
+  if (!b) return null;
+  const max = Math.round(window.innerHeight * 0.62);
+  return b.height <= max ? b : { ...b, height: max };
+}
+
+/** Scrolls the page so the step's target is in view before it is measured. */
+function reveal(selector: string) {
+  const el = document.querySelector<HTMLElement>(selector);
+  if (!el) return;
+  const pad = 24;
+  const r = el.getBoundingClientRect();
+  if (r.top >= pad && r.bottom <= window.innerHeight - pad) return;
+  const fits = r.height <= window.innerHeight - pad * 2;
+  const top = window.scrollY + r.top - (fits ? (window.innerHeight - r.height) / 2 : pad);
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: Math.max(0, top), behavior: reduce ? 'auto' : 'smooth' });
+}
+
 /** Spotlight walkthrough. Shows once per account after first sign-in, and on replay. */
 export function Tour({ userId }: { userId: string }) {
   const [open, setOpen] = useState(() => {
@@ -104,8 +124,14 @@ export function Tour({ userId }: { userId: string }) {
     }
     let tries = 0;
     let timer = 0;
+    let scrolled = false;
     const find = () => {
-      const b = measure(current.target);
+      // Scroll once the target has rendered, so the highlight is on screen.
+      if (!scrolled && document.querySelector(current.target)) {
+        scrolled = true;
+        reveal(current.target);
+      }
+      const b = clampBox(measure(current.target));
       if (b || tries++ > 30) {
         setBox(b);
       } else {
@@ -120,7 +146,7 @@ export function Tour({ userId }: { userId: string }) {
   // Keep the spotlight in place when the page scrolls or resizes.
   useEffect(() => {
     if (!open) return;
-    const update = () => setBox(measure(current.target));
+    const update = () => setBox(clampBox(measure(current.target)));
     window.addEventListener('resize', update);
     window.addEventListener('scroll', update, true);
     return () => {

@@ -12,6 +12,7 @@ import { AuthScreen, BackendNotice } from './components/AuthScreen';
 import { Logo } from './components/Logo';
 import { Landing } from './pages/Landing';
 import { Tour } from './components/Tour';
+import { UpdateBanner } from './components/UpdateBanner';
 import { backendConfigured } from './lib/supabase';
 
 export type Page = 'landing' | 'dashboard' | 'transactions' | 'loans' | 'reports' | 'settings';
@@ -187,6 +188,7 @@ export default function App() {
   return (
     <AuthProvider>
       <Gate />
+      <UpdateBanner />
     </AuthProvider>
   );
 }

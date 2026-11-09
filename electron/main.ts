@@ -1,10 +1,19 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
+import { autoUpdater } from 'electron-updater';
 
 // The renderer is the built web app in dist/, served from the app bundle.
 // Sign-up email links must come back to the hosted web origin (see src/lib/downloads.ts),
 // so the desktop window never handles those redirects itself.
 const isDev = !app.isPackaged;
+
+/** Update status pushed to the renderer; src/components/UpdateBanner.tsx renders it. */
+type UpdateState =
+  | { status: 'available'; version: string }
+  | { status: 'none' }
+  | { status: 'downloading'; percent: number }
+  | { status: 'downloaded'; version: string }
+  | { status: 'error'; message: string };
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -42,7 +51,64 @@ function createWindow() {
   if (isDev) win.webContents.openDevTools({ mode: 'detach' });
 }
 
+function broadcast(state: UpdateState) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send('walnut:update', state);
+  }
+}
+
+/**
+ * Checks GitHub Releases for a newer build. Nothing is installed until the user
+ * clicks the banner: the download and the restart are both explicit actions.
+ */
+function setupUpdates() {
+  ipcMain.handle('walnut:version', () => app.getVersion());
+
+  ipcMain.handle('walnut:check', async () => {
+    if (isDev) return;
+    try {
+      await autoUpdater.checkForUpdates();
+    } catch (error) {
+      broadcast({ status: 'error', message: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  ipcMain.handle('walnut:download', async () => {
+    if (isDev) return;
+    try {
+      await autoUpdater.downloadUpdate();
+    } catch (error) {
+      broadcast({ status: 'error', message: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  ipcMain.handle('walnut:install', () => {
+    setImmediate(() => autoUpdater.quitAndInstall());
+  });
+
+  if (isDev) return;
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => broadcast({ status: 'available', version: info.version }));
+  autoUpdater.on('update-not-available', () => broadcast({ status: 'none' }));
+  autoUpdater.on('download-progress', (progress) =>
+    broadcast({ status: 'downloading', percent: Math.round(progress.percent) }),
+  );
+  autoUpdater.on('update-downloaded', (info) => broadcast({ status: 'downloaded', version: info.version }));
+  autoUpdater.on('error', (error) =>
+    broadcast({ status: 'error', message: error?.message ?? 'Update check failed' }),
+  );
+
+  // Late enough that the first paint never waits on the network.
+  setTimeout(() => {
+    void autoUpdater.checkForUpdates().catch(() => {});
+  }, 4000);
+}
+
 app.whenReady().then(() => {
+  setupUpdates();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
