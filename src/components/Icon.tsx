@@ -19,7 +19,6 @@ export type IconName =
   | 'search'
   | 'trash'
   | 'pencil'
-  | 'download'
   | 'close';
 
 const ICONS: Record<IconName, ReactNode> = {
@@ -105,13 +104,6 @@ const ICONS: Record<IconName, ReactNode> = {
     </>
   ),
   close: <path d="m6 6 12 12M18 6 6 18" />,
-  download: (
-    <>
-      <path d="M12 4v10" />
-      <path d="m7.6 9.9 4.4 4.4 4.4-4.4" />
-      <path d="M5 19.5h14" />
-    </>
-  ),
 };
 
 export function Icon({
