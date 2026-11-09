@@ -11,3 +11,6 @@ dist
 dist-electron
 release
 *.png
+
+# Android launcher and splash assets are PNGs; the blanket *.png rule must not hide them
+!android/app/src/main/res/**/*.png
