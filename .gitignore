@@ -14,3 +14,9 @@ release
 
 # Android launcher and splash assets are PNGs; the blanket *.png rule must not hide them
 !android/app/src/main/res/**/*.png
+
+# Local Android toolchain and emulator
+.android/
+
+# PWA icons must ship with the app bundle
+!public/*.png
