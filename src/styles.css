@@ -123,6 +123,12 @@ h1, h2, h3 { font-family: var(--display); }
 .rail-link:hover:not(.active) { background: var(--green-soft); color: var(--green-dark); }
 .rail-link.active { background: var(--lime); color: var(--ink); }
 .rail-link:active { transform: scale(.94); }
+.rail-foot { margin-top: auto; }
+.rail-update { position: relative; }
+.rail-dot {
+  position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 0 2px var(--card);
+}
 
 .main { padding: 30px 38px 72px; min-width: 0; width: 100%; max-width: 1320px; margin: 0 auto; }
 

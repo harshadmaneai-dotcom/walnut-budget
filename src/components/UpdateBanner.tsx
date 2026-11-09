@@ -27,8 +27,28 @@ export function UpdateBanner() {
     });
   }, []);
 
+  useEffect(() => {
+    if (state?.status !== 'none') return;
+    const timer = setTimeout(() => setDismissed(true), 4000);
+    return () => clearTimeout(timer);
+  }, [state]);
+
   if (!state || dismissed) return null;
-  if (state.status === 'none') return null;
+
+  // "Up to date" is a confirmation of a check the user asked for, so it fades out.
+  if (state.status === 'none') {
+    return (
+      <div className="update-banner" role="status" aria-live="polite">
+        <div className="update-text">
+          <strong>You&apos;re up to date</strong>
+          <span>{current ? `Walnut v${current} is the newest build.` : 'No newer build to install.'}</span>
+        </div>
+        <button className="update-dismiss" aria-label="Dismiss update notice" onClick={() => setDismissed(true)}>
+          ×
+        </button>
+      </div>
+    );
+  }
 
   // A failed check used to disappear. Say so, so a blocked update is not silent.
   if (state.status === 'error') {

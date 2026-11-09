@@ -13,6 +13,7 @@ import { Logo } from './components/Logo';
 import { Landing } from './pages/Landing';
 import { Tour } from './components/Tour';
 import { UpdateBanner } from './components/UpdateBanner';
+import { UpdateRailButton } from './components/UpdateRailButton';
 import { backendConfigured } from './lib/supabase';
 import { isNativeShell } from './lib/platform';
 
@@ -86,6 +87,9 @@ function BudgetApp({ userId }: { userId: string }) {
               <span className="rail-label">{n.label}</span>
             </a>
           ))}
+        </div>
+        <div className="rail-group rail-foot">
+          <UpdateRailButton />
         </div>
       </aside>
       <main className="main">
