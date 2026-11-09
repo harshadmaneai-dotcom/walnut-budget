@@ -23,7 +23,9 @@ function createWindow() {
     },
   });
 
-  win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  // Open on an app route, not the marketing landing page: signed-out users are sent
+  // to sign-in by Gate, signed-in users go straight to the dashboard.
+  win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), { hash: 'dashboard' });
 
   // External links (for example the hosted site) open in the user's browser, not inside the app.
   win.webContents.setWindowOpenHandler(({ url }) => {

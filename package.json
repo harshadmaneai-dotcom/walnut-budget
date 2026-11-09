@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "desktop:compile": "tsc -p tsconfig.electron.json",
+    "desktop:compile": "tsc -p tsconfig.electron.json && node -e \"require('fs').writeFileSync('dist-electron/package.json', JSON.stringify({ type: 'commonjs' }) + '\\n')\"",
     "desktop": "npm run build && npm run desktop:compile && electron-builder --win nsis",
     "desktop:mac": "npm run build && npm run desktop:compile && electron-builder --mac dmg",
     "desktop:dev": "npm run build && npm run desktop:compile && electron ."
