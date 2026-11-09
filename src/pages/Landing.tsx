@@ -1,6 +1,6 @@
 import { Icon, type IconName } from '../components/Icon';
 import { Logo } from '../components/Logo';
-import { DESKTOP_DOWNLOAD_URL } from '../lib/downloads';
+import { ANDROID_DOWNLOAD_URL, DESKTOP_DOWNLOAD_URL } from '../lib/downloads';
 
 interface LandingProps {
   signedIn: boolean;
@@ -23,6 +23,7 @@ const STEPS: { title: string; text: string }[] = [
 ];
 
 export function Landing({ signedIn, onSignIn, onCreate, onOpenBudget }: LandingProps) {
+  const isAndroid = /android/i.test(navigator.userAgent);
   return (
     <div className="landing">
       <header className="landing-nav">
@@ -99,13 +100,32 @@ export function Landing({ signedIn, onSignIn, onCreate, onOpenBudget }: LandingP
 
       <section className="landing-section landing-download">
         <div>
-          <span className="eyebrow">Desktop app</span>
-          <h2>Prefer a desktop app?</h2>
-          <p className="muted">Download Walnut for Windows. It signs in with the same account as the web app.</p>
+          <span className="eyebrow">Apps</span>
+          <h2>Take Walnut with you</h2>
+          <p className="muted">
+            The Windows app and the Android app sign in with the same account as the web app.
+          </p>
+          <p className="muted landing-fineprint">
+            Android asks once whether to allow installs from your browser. That is normal for apps
+            installed outside the Play Store.
+          </p>
         </div>
         <div className="landing-cta">
-          <a className="btn primary" href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
-            Download for Windows
+          <a
+            className="btn primary"
+            href={isAndroid ? ANDROID_DOWNLOAD_URL : DESKTOP_DOWNLOAD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Download for {isAndroid ? 'Android' : 'Windows'}
+          </a>
+          <a
+            className="btn"
+            href={isAndroid ? DESKTOP_DOWNLOAD_URL : ANDROID_DOWNLOAD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {isAndroid ? 'Windows version' : 'Android app (APK)'}
           </a>
           <button className="btn" onClick={signedIn ? onOpenBudget : onCreate}>
             {signedIn ? 'Open my budget' : 'Use it in the browser'}

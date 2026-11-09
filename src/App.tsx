@@ -14,6 +14,7 @@ import { Landing } from './pages/Landing';
 import { Tour } from './components/Tour';
 import { UpdateBanner } from './components/UpdateBanner';
 import { backendConfigured } from './lib/supabase';
+import { isNativeShell } from './lib/platform';
 
 export type Page = 'landing' | 'dashboard' | 'transactions' | 'loans' | 'reports' | 'settings';
 
@@ -27,7 +28,9 @@ const NAV: { id: Page; label: string; icon: IconName }[] = [
 
 function pageFromHash(): Page {
   const h = window.location.hash.replace('#', '');
-  if (h === 'landing' || h === '') return 'landing';
+  if (h === 'landing') return 'landing';
+  // The Android shell starts with no hash; open the app, not the marketing page.
+  if (h === '') return isNativeShell() ? 'dashboard' : 'landing';
   return NAV.some((n) => n.id === h) ? (h as Page) : 'dashboard';
 }
 
@@ -116,7 +119,9 @@ type GuestRoute = 'landing' | 'signin' | 'signup';
 /** Signed-out routes: the landing is its own page; sign-in and sign-up are separate pages; any app route redirects to sign-in. */
 function guestRoute(): GuestRoute {
   const h = window.location.hash.replace('#', '');
-  if (h === '' || h === 'landing') return 'landing';
+  if (h === 'landing') return 'landing';
+  // Signed out in the Android shell: show sign-in instead of the landing page.
+  if (h === '') return isNativeShell() ? 'signin' : 'landing';
   if (h === 'signup') return 'signup';
   return 'signin';
 }

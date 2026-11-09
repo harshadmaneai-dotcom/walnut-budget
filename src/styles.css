@@ -834,4 +834,6 @@ textarea:focus-visible {
   .update-banner { left: 12px; right: 12px; bottom: 88px; max-width: none; }
 }
 
+.landing-fineprint { font-size: 13px; line-height: 1.5; margin-top: 8px; max-width: 46ch; }
+
 /* END */
