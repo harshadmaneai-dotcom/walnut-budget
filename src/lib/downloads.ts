@@ -7,7 +7,7 @@ export const DESKTOP_DOWNLOAD_URL =
 
 /** Android APK, published beside the Windows installer on the same release. */
 export const ANDROID_DOWNLOAD_URL =
-  'https://github.com/harshadmaneai-dotcom/walnut-budget/releases/download/v2.0.2/Walnut-2.0.2.apk';
+  'https://github.com/harshadmaneai-dotcom/walnut-budget/releases/download/v2.0.3/Walnut-2.0.3.apk';
 
 /**
  * Hosted web origin used for auth redirects. The desktop app runs from file://,
