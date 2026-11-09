@@ -82,6 +82,9 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Walnut Android ${{ github.ref_name }}
+          # The desktop updater reads latest.yml from the *latest* release. An APK-only
+          # release must never take that flag, or installed desktop apps stop updating.
+          make_latest: false
           files: |
             dist-apk/*.apk
           fail_on_unmatched_files: true
