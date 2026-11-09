@@ -12,6 +12,7 @@ import { confirmDialog } from '../components/confirm';
 import { authErrorMessage, useAuth } from '../lib/auth';
 import { Logo } from '../components/Logo';
 import { replayTour } from '../components/Tour';
+import { getThemeChoice, setThemeChoice, type ThemeChoice } from '../lib/theme';
 
 export function Settings({ store }: { store: Store }) {
   const { data, update, replaceAll } = store;
@@ -20,6 +21,7 @@ export function Settings({ store }: { store: Store }) {
   const [importError, setImportError] = useState('');
   const [signOutError, setSignOutError] = useState('');
   const [signingOut, setSigningOut] = useState(false);
+  const [theme, setTheme] = useState<ThemeChoice>(getThemeChoice);
 
   const email = user?.email ?? '';
   const initial = email ? email[0].toUpperCase() : 'W';
@@ -131,6 +133,23 @@ export function Settings({ store }: { store: Store }) {
                 onChange={(v) =>
                   update((p) => ({ ...p, settings: { ...p.settings, firstDayOfWeek: Number(v) as 0 | 1 } }))
                 }
+              />
+            </label>
+            <label>
+              Appearance
+              <Select
+                value={theme}
+                ariaLabel="Appearance"
+                options={[
+                  { value: 'system', label: 'System default' },
+                  { value: 'light', label: 'Light' },
+                  { value: 'dark', label: 'Dark' },
+                ]}
+                onChange={(v) => {
+                  const next = v as ThemeChoice;
+                  setTheme(next);
+                  setThemeChoice(next);
+                }}
               />
             </label>
           </div>
