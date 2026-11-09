@@ -1,8 +1,13 @@
 name: Desktop installer
 
 # Builds the Windows installer and publishes it to a GitHub Release together with
-# latest.yml. The installed desktop app reads latest.yml (electron-updater) to find
-# and install newer versions, so every desktop release must upload both files.
+# latest.yml. The installed desktop app reads latest.yml (electron-updater) from the
+# repository's *latest* release to find newer versions, so every desktop release must
+# upload both files and claim the latest flag.
+#
+# An APK-only release published after a desktop release takes the latest flag with it,
+# and installed apps then find no latest.yml and cannot update. Create Android releases
+# with "set as the latest release" off, or push a fresh desktop-* tag afterwards.
 
 on:
   workflow_dispatch:
@@ -43,6 +48,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Walnut desktop ${{ github.ref_name }}
+          make_latest: true
           files: |
             release/*.exe
             release/*.exe.blockmap
