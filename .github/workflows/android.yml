@@ -44,8 +44,14 @@ jobs:
           # a ~100 MB binary this job does not need.
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
 
+      # Vite inlines these at build time. Without them the bundle ships with
+      # backendConfigured = false and the app opens on its "needs backend"
+      # notice instead of the sign-in screen.
       - name: Build web app
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Sync Capacitor
         run: npx cap sync android
