@@ -30,10 +30,13 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - uses: android-actions/setup-android@v3
-
+      # The runner image ships an Android SDK; only the target platform may be missing.
       - name: Install Android SDK platform
-        run: sdkmanager --install "platforms;android-36" || sdkmanager --install "platforms;android-35"
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platforms;android-36" || echo "::warning::platform 36 install failed"
+          "$SDKMANAGER" --list_installed | head -n 20
 
       - run: npm ci
 
