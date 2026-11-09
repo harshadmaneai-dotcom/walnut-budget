@@ -28,7 +28,25 @@ export function UpdateBanner() {
   }, []);
 
   if (!state || dismissed) return null;
-  if (state.status === 'none' || state.status === 'error') return null;
+  if (state.status === 'none') return null;
+
+  // A failed check used to disappear. Say so, so a blocked update is not silent.
+  if (state.status === 'error') {
+    return (
+      <div className="update-banner" role="status" aria-live="polite">
+        <div className="update-text">
+          <strong>Couldn&apos;t check for updates</strong>
+          <span>{state.message}</span>
+        </div>
+        <button className="btn small primary" onClick={() => void window.walnut?.checkForUpdates()}>
+          Try again
+        </button>
+        <button className="update-dismiss" aria-label="Dismiss update notice" onClick={() => setDismissed(true)}>
+          ×
+        </button>
+      </div>
+    );
+  }
 
   const busy = state.status === 'downloading';
   const available = state.status === 'available' ? state.version : '';

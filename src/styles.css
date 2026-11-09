@@ -879,7 +879,7 @@ textarea:focus-visible {
 }
 .update-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 190px; }
 .update-text strong { font-size: 14px; }
-.update-text span { font-size: 13px; color: var(--muted); }
+.update-text span { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
 .update-progress { flex: 1 1 120px; height: 6px; border-radius: 999px; background: #edf1e4; overflow: hidden; }
 .update-progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--lime)); transition: width .2s ease; }
 .update-dismiss {

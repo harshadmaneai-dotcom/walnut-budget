@@ -12,6 +12,7 @@ import { confirmDialog } from '../components/confirm';
 import { authErrorMessage, useAuth } from '../lib/auth';
 import { Logo } from '../components/Logo';
 import { replayTour } from '../components/Tour';
+import { UpdatePanel } from '../components/UpdatePanel';
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from '../lib/theme';
 
 export function Settings({ store }: { store: Store }) {
@@ -170,6 +171,8 @@ export function Settings({ store }: { store: Store }) {
           </div>
           {importError && <p className="error" style={{ marginTop: 12 }}>{importError}</p>}
         </section>
+
+        <UpdatePanel />
 
         <section className="card col-6" data-tour="walkthrough">
           <div className="card-head"><div><h2>Walkthrough</h2><p>A guided tour of where things are</p></div></div>
