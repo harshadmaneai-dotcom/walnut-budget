@@ -185,7 +185,7 @@ export function Dashboard({ store }: { store: Store }) {
             const st = loanStatus(l, today);
             return (
               <div className="list-row" key={l.id}>
-                <div>
+                <div className="row-text">
                   <div>{l.counterparty}</div>
                   <div className="meta">Due {formatDate(l.dueDate!)}</div>
                 </div>
@@ -207,9 +207,9 @@ export function Dashboard({ store }: { store: Store }) {
             const over = spent > c.monthlyBudget!;
             return (
               <div key={c.id} style={{ marginBottom: 15 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 14 }}>
-                  <span>{c.name}</span>
-                  <span className={over ? 'neg' : 'muted'}>{formatMoney(spent, cur)} / {formatMoney(c.monthlyBudget!, cur)}</span>
+                <div className="budget-row">
+                  <span className="budget-name">{c.name}</span>
+                  <span className={`budget-amount ${over ? 'neg' : 'muted'}`}>{formatMoney(spent, cur)} / {formatMoney(c.monthlyBudget!, cur)}</span>
                 </div>
                 <div className="progress"><span className={over ? 'over' : ''} style={{ width: `${pct}%` }} /></div>
               </div>
@@ -229,7 +229,7 @@ export function Dashboard({ store }: { store: Store }) {
                   <div className={`dot-icon ${grp ? `g-${grp}` : 'g-income'}`}>
                     <Icon name={t.type === 'income' ? 'arrowDown' : 'arrowUp'} size={17} />
                   </div>
-                  <div>
+                  <div className="row-text">
                     <div>{c?.name ?? 'Other'}{t.note ? ` · ${t.note}` : ''}</div>
                     <div className="meta">{formatDate(t.date)}</div>
                   </div>

@@ -110,11 +110,11 @@ export function RecurringPanel({ store }: { store: Store }) {
       {data.recurring.length === 0 && <div className="empty">No recurring entries yet.</div>}
       {data.recurring.map((r) => (
         <div
-          className="list-row"
+          className="list-row recurring-row"
           key={r.id}
           style={editingId === r.id ? { background: '#f8faf3', borderRadius: 12, paddingLeft: 10, paddingRight: 10 } : undefined}
         >
-          <div>
+          <div className="row-text">
             <div>{r.note || data.categories.find((c) => c.id === r.categoryId)?.name}</div>
             <div className="meta">
               {r.note ? `${data.categories.find((c) => c.id === r.categoryId)?.name ?? ''} · ` : ''}
@@ -123,7 +123,7 @@ export function RecurringPanel({ store }: { store: Store }) {
               {r.lastApplied ? ` · last ${r.lastApplied}` : ''}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="row-actions">
             <span className={r.type === 'income' ? 'pos' : 'neg'}>{formatMoney(r.amount, cur)}</span>
             <button className="btn small" onClick={() => startEdit(r)}>Edit</button>
             <button className="btn small danger" onClick={() => remove(r.id)}>Stop</button>
