@@ -1,0 +1,14 @@
+# Local build output and toolchains: Vercel rebuilds the site from source.
+node_modules
+dist
+dist-electron
+release
+.android
+android/.gradle
+android/build
+android/app/build
+
+# Local screenshots and logs from verification runs
+android-*.png
+*-check.png
+*.log
