@@ -39,6 +39,12 @@ function run(command, args) {
   execFileSync(command, args, { cwd: ROOT, stdio: 'inherit' });
 }
 
+/** npm is npm.cmd on Windows, which needs a shell to spawn. */
+function runNpm(args) {
+  const command = ['npm', ...args].join(' ');
+  execFileSync(command, { cwd: ROOT, stdio: 'inherit', shell: true });
+}
+
 function parseVersion(version) {
   const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
   if (!match) fail(`"${version}" is not a MAJOR.MINOR.PATCH version.`);
@@ -164,8 +170,8 @@ async function main() {
 
   log(`version ${current} → ${next.text}`);
   log('running typecheck and tests …');
-  run('npm', ['run', 'typecheck']);
-  run('npm', ['test']);
+  runNpm(['run', 'typecheck']);
+  runNpm(['test']);
 
   if (dryRun) {
     log(`dry run: would commit, tag v${next.text} and push. Nothing was changed.`);
