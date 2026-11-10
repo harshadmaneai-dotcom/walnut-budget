@@ -10,6 +10,19 @@ Data lives in Supabase, one row per account, with a per-account `localStorage` c
 - Database: Supabase project `mucbgkqwqeqvtgmxplnu`, table `public.walnut_data`
 - The migration below is already applied to that project, and `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` are set in Vercel for production and preview.
 
+## Which repo is which
+
+One repository builds this app and one Vercel project serves it. Anything else named Walnut on GitHub is a different project.
+
+| Thing | Identifier |
+| --- | --- |
+| Source of this app | `harshadmaneai-dotcom/walnut-budget` (this repo) |
+| Vercel project | `budget-tracker` → <https://walnut-budget.vercel.app> |
+| Releases | GitHub Releases on this repo, tag `v<package.json version>` |
+| Not this app | `harshadmaneai-dotcom/Walnut` (private, an old prompt-testing tool) |
+
+Pushes to `main` do not deploy the site by themselves: Vercel Git deployments are off for `budget-tracker`, so a site deploy is triggered explicitly (see [Releasing](#releasing)). The app, the APK and the installer always come from GitHub Releases.
+
 ## Requirements
 
 - Node.js 18 or newer
