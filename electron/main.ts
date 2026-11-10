@@ -105,6 +105,11 @@ function setupUpdates() {
   setTimeout(() => {
     void autoUpdater.checkForUpdates().catch(() => {});
   }, 4000);
+
+  // A window can stay open for days, so ask again periodically instead of only at launch.
+  setInterval(() => {
+    void autoUpdater.checkForUpdates().catch(() => {});
+  }, 6 * 60 * 60 * 1000);
 }
 
 app.whenReady().then(() => {

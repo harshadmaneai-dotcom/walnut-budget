@@ -54,6 +54,7 @@ The old single-user table (`budget_tracker_data`) is left untouched as a backup.
 | `npm run desktop:dev` | Build and launch the Electron desktop app locally |
 | `npm run desktop:mac` | Build a macOS `.dmg` (run on a Mac) |
 | `npm run android:sync` | Build and copy the web bundle into the Android project |
+| `npm run release` | Bump, tag and publish a release for desktop and Android |
 
 ## Desktop app
 
@@ -62,15 +63,29 @@ The desktop app is the same web bundle wrapped in Electron (`electron/main.ts`, 
 - **Windows:** `npm run desktop` produces an unsigned NSIS installer. Windows SmartScreen will warn about it until a code-signing certificate is added.
 - **macOS:** `npm run desktop:mac` must run on a Mac. Code signing and notarization are not configured.
 - **Sign-up links:** confirmation emails redirect to the hosted site, not `file://`. Add the hosted origin to Authentication → URL Configuration in Supabase, and set `WEB_ORIGIN` in `src/lib/downloads.ts`.
-- **Downloads:** upload the installers to a GitHub Release, then set `DESKTOP_DOWNLOAD_URL` in `src/lib/downloads.ts`. The landing page links to that one constant.
+- **Downloads:** `npm run release` publishes the installer to a GitHub Release; the landing page links to the stable `releases/latest/download/Walnut-Setup.exe` URL.
+- **Updates:** the installed app checks GitHub on launch, every six hours, and from Settings → Desktop app. `latest.yml` in the latest release is what drives it, so the release must always be marked "latest" (the Release workflow does that).
 
 ## Android app
 
-The Android app is the same web bundle wrapped in Capacitor (`android/`, `capacitor.config.ts`). The site serves a fixed `public/Walnut.apk`, and the Android workflow builds the same bundle as a debug APK.
+The Android app is the same web bundle wrapped in Capacitor (`android/`, `capacitor.config.ts`).
 
-- **Updates:** Settings → Android app → **Check for updates** reads `public/app-version.json` from the deployed site and compares it with the build it is running. The APK opens in the browser (allow installs from the browser once) and installs over the previous version.
-- **Release checklist:** bump `package.json`, `versionName`/`versionCode` in `android/app/build.gradle`, `ANDROID_VERSION` in `src/lib/downloads.ts` and `public/app-version.json`, then `npm run android:sync`, `cd android && ./gradlew assembleDebug`, and replace `public/Walnut.apk` with `android/app/build/outputs/apk/debug/app-debug.apk`. The feed and the APK must ship in the same commit, or users are prompted for a build they already have. Use `android:sync` rather than a bare build, because `dist/Walnut.apk` is a copy of the previous release and would otherwise be bundled inside the new APK.
-- **Signing:** builds use the committed `android/app/walnut-debug.jks` so an update installs over the installed app. If that key is ever replaced, everyone has to uninstall once.
+- **Updates:** Settings → Android app → **Check for updates**, or the banner that appears on launch when a newer build exists. The APK downloads in-app (`ApkUpdaterPlugin.java`) and opens the system installer, so the only thing the user taps is Android's own Install confirmation. Android asks once to allow installs from Walnut.
+- **Version:** `android/app/build.gradle` reads `package.json` (the only version number in the project) and derives `versionCode` as `major*10000 + minor*100 + patch`.
+- **Signing:** builds use the committed `android/app/walnut-debug.jks`. Android refuses an update whose signature differs, so the release workflow pins the certificate and fails if it ever changes. Replacing that key would force every installed app to be uninstalled first.
+
+## Releasing
+
+```bash
+npm run release patch     # 2.0.11 -> 2.0.12 (also minor, major, or an explicit x.y.z)
+```
+
+The script checks the tree is clean and in sync, runs the tests, bumps `package.json`, commits `Release v<version>`, pushes the tag, and waits for the Release workflow to publish. The workflow builds the Windows installer and the APK from that commit, verifies both (version, `versionCode`, pinned APK signature), publishes them in one GitHub Release marked "latest", and re-checks the live download URLs.
+
+- Both apps read that one release: desktop through `latest.yml`, Android through the release tag plus `Walnut.apk`.
+- The release script runs from `main` only; a release is never built from a dirty tree.
+- **Website:** Vercel Git deployments are off for this project. Enable them in the Vercel project settings, or add a `VERCEL_DEPLOY_HOOK` secret and the workflow triggers a production deploy after publishing.
+- Do not publish GitHub releases by hand — a release without `latest.yml` or without `Walnut.apk` strands one of the platforms.
 
 ## Project layout
 

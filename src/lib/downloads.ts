@@ -1,19 +1,16 @@
 /**
- * Download targets for the landing page and the Apps section.
+ * Download targets for the landing page and both updaters.
  *
- * Both are stable names, so they never go stale: the Windows installer comes from the
- * repository's *latest* release under a fixed filename, and the APK is a fixed file in
- * public/ that every Android release replaces.
+ * Every release publishes one GitHub Release tagged v<version> that carries the Windows
+ * installer, latest.yml and the APK, so these stable "latest" URLs always resolve to the
+ * newest build without anything to bump.
  */
-export const DESKTOP_DOWNLOAD_URL =
-  'https://github.com/harshadmaneai-dotcom/walnut-budget/releases/latest/download/Walnut-Setup.exe';
+export const REPO = 'harshadmaneai-dotcom/walnut-budget';
 
-/** Android APK, served from this site (public/) so the browser downloads it in place. */
-export const ANDROID_DOWNLOAD_URL = '/Walnut.apk';
+export const DESKTOP_DOWNLOAD_URL = `https://github.com/${REPO}/releases/latest/download/Walnut-Setup.exe`;
 
-/** Shown in the Apps section. Bump on release; the links themselves never change. */
-export const DESKTOP_VERSION = '2.0.10';
-export const ANDROID_VERSION = '2.0.11';
+/** Android APK, published beside the installer in the same release. */
+export const ANDROID_DOWNLOAD_URL = `https://github.com/${REPO}/releases/latest/download/Walnut.apk`;
 
 /**
  * Hosted web origin used for auth redirects. The desktop app runs from file://,

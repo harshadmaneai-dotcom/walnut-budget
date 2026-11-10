@@ -1,4 +1,13 @@
+import groovy.json.JsonSlurper
+
 apply plugin: 'com.android.application'
+
+// package.json is the only version number in the project: the web bundle, the installer and
+// the APK all read it, so a release cannot ship mismatched builds.
+def packageJson = new JsonSlurper().parse(new File(rootProject.projectDir, '../package.json'))
+def appVersion = packageJson.version.toString()
+def versionDigits = appVersion.tokenize('.').collect { part -> part.isInteger() ? part.toInteger() : 0 }
+def appVersionCode = (versionDigits[0] ?: 0) * 10000 + (versionDigits[1] ?: 0) * 100 + (versionDigits[2] ?: 0)
 
 android {
     namespace = "app.walnut.mobile"
@@ -7,8 +16,8 @@ android {
         applicationId "app.walnut.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20011
-        versionName "2.0.11"
+        versionCode appVersionCode
+        versionName appVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

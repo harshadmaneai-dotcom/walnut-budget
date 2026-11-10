@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/Walnut.apk",
+      "destination": "https://github.com/harshadmaneai-dotcom/walnut-budget/releases/latest/download/Walnut.apk",
+      "permanent": true
+    }
+  ]
+}

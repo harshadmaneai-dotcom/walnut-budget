@@ -1,6 +1,7 @@
 import { Icon, type IconName } from '../components/Icon';
 import { Logo } from '../components/Logo';
-import { ANDROID_DOWNLOAD_URL, ANDROID_VERSION, DESKTOP_DOWNLOAD_URL, DESKTOP_VERSION } from '../lib/downloads';
+import { ANDROID_DOWNLOAD_URL, DESKTOP_DOWNLOAD_URL } from '../lib/downloads';
+import { APP_VERSION } from '../lib/version';
 
 interface LandingProps {
   signedIn: boolean;
@@ -106,11 +107,10 @@ export function Landing({ signedIn, onSignIn, onCreate, onOpenBudget }: LandingP
             The Windows app and the Android app sign in with the same account as the web app.
           </p>
           <p className="muted landing-fineprint">
-            Windows v{DESKTOP_VERSION} · Android v{ANDROID_VERSION}. Both follow your system's light
-            or dark theme.
+            Windows and Android v{APP_VERSION}. Both follow your system's light or dark theme.
           </p>
           <p className="muted landing-fineprint">
-            Android asks once whether to allow installs from your browser. That is normal for apps
+            Android asks once whether to allow installs from Walnut. That is normal for apps
             installed outside the Play Store.
           </p>
         </div>

@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
-import { WEB_ORIGIN } from '../lib/downloads';
 import { isNativeShell } from '../lib/platform';
-import { APP_VERSION, compareVersions } from '../lib/version';
+import { APP_VERSION } from '../lib/version';
+import { useAndroidUpdate } from '../lib/useAndroidUpdate';
 
 /**
  * The Settings update card, in two modes:
  *  - the Electron build has a bridge, so it can check, download and install in place;
- *  - the Android shell has no bridge and cannot install silently, so it checks the build
- *    published on the site and hands the APK to the browser;
+ *  - the Android shell downloads the APK itself and hands it to the system installer;
  *  - the plain website renders nothing.
  */
 export function UpdatePanel() {
@@ -87,50 +86,10 @@ function DesktopUpdate() {
   );
 }
 
-/** Where every Android release publishes the build the APKs should download. */
-const FEED_URL = `${WEB_ORIGIN}/app-version.json`;
-
-type Feed = { version: string; url: string };
-
-/**
- * Android only: compares the installed build with the one the site publishes. The bundle
- * ships its own copy of app-version.json, so the deployed file is fetched fresh with the
- * cache bypassed instead of read from disk.
- */
+/** Android only: compares with the published release and installs it in place. */
 function AndroidUpdate() {
-  const [checking, setChecking] = useState(false);
-  const [feed, setFeed] = useState<Feed | null>(null);
-  const [error, setError] = useState('');
-
-  async function check() {
-    if (checking) return;
-    setChecking(true);
-    setError('');
-    setFeed(null);
-    try {
-      const response = await fetch(`${FEED_URL}?t=${Date.now()}`, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`the update feed answered ${response.status}`);
-      const json = (await response.json()) as { android?: Partial<Feed> };
-      const version = json.android?.version;
-      const url = json.android?.url;
-      if (typeof version !== 'string' || typeof url !== 'string') {
-        throw new Error('the update feed has no Android build');
-      }
-      setFeed({ version, url });
-    } catch (e) {
-      const detail = e instanceof Error ? e.message : '';
-      setError(`Couldn't check for updates${detail ? ` (${detail})` : ''}. Try again.`);
-    } finally {
-      setChecking(false);
-    }
-  }
-
-  const update = feed && compareVersions(feed.version, APP_VERSION) > 0 ? feed : null;
-  const status = update
-    ? `Walnut ${update.version} is available. You are on v${APP_VERSION}.`
-    : feed
-      ? "You're on the latest version."
-      : '';
+  const { stage, update, percent, message, check, install } = useAndroidUpdate();
+  const busy = stage === 'downloading' || stage === 'installing';
 
   return (
     <section className="card col-6">
@@ -141,31 +100,38 @@ function AndroidUpdate() {
         </div>
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button className="btn" onClick={check} disabled={checking}>
-          {checking ? 'Checking…' : 'Check for updates'}
+        <button className="btn" onClick={() => void check(true)} disabled={stage === 'checking' || busy}>
+          {stage === 'checking' ? 'Checking…' : 'Check for updates'}
         </button>
         {update && (
-          // Capacitor hands URLs on another host to the system browser, which downloads
-          // the APK; installing it from there is the user's tap.
-          <a className="btn primary" href={update.url} style={{ textDecoration: 'none' }}>
-            Download v{update.version}
-          </a>
+          <button className="btn primary" onClick={() => void install()} disabled={busy}>
+            {stage === 'downloading'
+              ? `Downloading… ${percent}%`
+              : stage === 'installing'
+                ? 'Opening installer…'
+                : `Install v${update.version}`}
+          </button>
         )}
       </div>
-      {error && (
-        <p className="error" style={{ marginTop: 12 }}>
-          {error}
+      {stage === 'downloading' && (
+        <div className="update-progress" aria-hidden="true" style={{ marginTop: 12 }}>
+          <span style={{ width: `${percent}%` }} />
+        </div>
+      )}
+      {message && (
+        <p className={stage === 'error' ? 'error' : 'muted'} style={{ marginTop: 12 }}>
+          {message}
         </p>
       )}
-      {status && (
+      {update && (
         <p className="muted" style={{ marginTop: 12 }}>
-          {status}
+          Walnut {update.version} is available. You are on v{APP_VERSION}.
         </p>
       )}
       {update && (
         <p className="muted small" style={{ marginTop: 8 }}>
-          The APK opens in your browser. Allow installs from the browser once, then tap the
-          downloaded file to update.
+          Android asks once to allow installs from Walnut; after that the update installs over
+          this build.
         </p>
       )}
     </section>

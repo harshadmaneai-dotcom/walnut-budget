@@ -2,4 +2,6 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <external-path name="my_images" path="." />
     <cache-path name="my_cache_images" path="." />
+    <!-- The updater downloads the new APK here so the installer can read it. -->
+    <external-files-path name="updates" path="updates/" />
 </paths>

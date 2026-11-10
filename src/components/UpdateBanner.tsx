@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { isNativeShell } from '../lib/platform';
+import { APP_VERSION } from '../lib/version';
+import { useAndroidUpdate } from '../lib/useAndroidUpdate';
 
 /** Mirrors UpdateState in electron/main.ts and electron/preload.ts. */
 type UpdateState =
@@ -9,10 +12,17 @@ type UpdateState =
   | { status: 'error'; message: string };
 
 /**
- * Desktop only: tells the user a newer build exists and installs it on click.
- * The web app has no bridge, so this renders nothing in the browser.
+ * Tells the user a newer build exists and installs it on click. The Electron build reads
+ * state pushed from the main process; the Android shell checks the published release itself.
+ * The website renders nothing.
  */
 export function UpdateBanner() {
+  if (window.walnut) return <DesktopUpdateBanner />;
+  if (isNativeShell()) return <AndroidUpdateBanner />;
+  return null;
+}
+
+function DesktopUpdateBanner() {
   const [state, setState] = useState<UpdateState | null>(null);
   const [current, setCurrent] = useState<string>('');
   const [dismissed, setDismissed] = useState(false);
@@ -102,6 +112,50 @@ export function UpdateBanner() {
       )}
       {!busy && (
         <button className="update-dismiss" aria-label="Dismiss update notice" onClick={() => setDismissed(true)}>
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Android only: checks the published release when the app opens (a cached answer is fine
+ * here, so a launch never waits on GitHub) and offers a one-tap install.
+ */
+function AndroidUpdateBanner() {
+  const { stage, update, percent, check, install, dismissed, dismiss } = useAndroidUpdate();
+
+  useEffect(() => {
+    void check(false);
+  }, [check]);
+
+  if (!update || dismissed) return null;
+  const busy = stage === 'downloading' || stage === 'installing';
+
+  return (
+    <div className="update-banner" role="status" aria-live="polite">
+      <div className="update-text">
+        <strong>Walnut {update.version} is available</strong>
+        <span>
+          {stage === 'downloading'
+            ? `Downloading… ${percent}%`
+            : stage === 'installing'
+              ? 'Opening the installer…'
+              : `You are on v${APP_VERSION}.`}
+        </span>
+      </div>
+      {stage === 'downloading' ? (
+        <div className="update-progress" aria-hidden="true">
+          <span style={{ width: `${percent}%` }} />
+        </div>
+      ) : (
+        <button className="btn small primary" onClick={() => void install()} disabled={busy}>
+          Install update
+        </button>
+      )}
+      {!busy && (
+        <button className="update-dismiss" aria-label="Dismiss update notice" onClick={dismiss}>
           ×
         </button>
       )}
