@@ -54,14 +54,13 @@ export function Landing({ signedIn, onSignIn, onCreate, onOpenBudget }: LandingP
             monthly reports built in.
           </p>
           <div className="landing-cta">
-            {signedIn ? (
+            {signedIn && (
               <button className="btn primary" onClick={onOpenBudget}>Open my budget</button>
-            ) : (
-              <>
-                <button className="btn primary" onClick={onCreate}>Create account</button>
-                <button className="btn" onClick={onSignIn}>Sign in</button>
-              </>
             )}
+            {/* Signing in and creating an account stay in the top-right nav. */}
+            <a className="btn primary" href={ANDROID_DOWNLOAD_URL} download>
+              Download mobile app
+            </a>
           </div>
         </div>
         <div className="landing-hero-art" aria-hidden="true">

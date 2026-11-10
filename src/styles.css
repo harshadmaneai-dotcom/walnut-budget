@@ -78,7 +78,9 @@
 [data-theme="dark"] input:hover, [data-theme="dark"] select:hover, [data-theme="dark"] textarea:hover { border-color: #3d5249; }
 [data-theme="dark"] input:focus, [data-theme="dark"] select:focus, [data-theme="dark"] textarea:focus { background: #101b17; border-color: #6fae3a; box-shadow: 0 0 0 4px rgba(201, 242, 94, .18); }
 [data-theme="dark"] .tabs { background: #1d2a25; }
-[data-theme="dark"] .tabs .tab.active { background: var(--lime); color: var(--on-lime); }
+/* --ink is near-white in dark mode, so `.tab.active` (white text on --ink) would paint
+   the selected tab white on white. This has to cover .auth-tabs too, which is not .tabs. */
+[data-theme="dark"] .tab.active { background: var(--lime); color: var(--on-lime); }
 /* --ink is near-white in dark mode, so the light-mode treatment (#fff on --ink) would
    paint the selected day white on white. Lime matches the active tab and rail link. */
 [data-theme="dark"] .dp-day.is-selected { background: var(--lime); color: var(--on-lime); }
