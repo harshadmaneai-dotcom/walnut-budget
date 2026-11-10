@@ -3,9 +3,11 @@ import type { Store } from '../store';
 import type { Category, CategoryGroup, TxType } from '../lib/types';
 import { newId } from '../lib/storage';
 import { currencySymbol, formatMoney, parseAmount } from '../lib/format';
-import { GROUPS, categoryGroup } from '../lib/groups';
+import { GROUPS, categoryGroup, groupLabel } from '../lib/groups';
+import { categoryUsage, eligibleTargets, mergeCategory, type CategoryUsage } from '../lib/categories';
 import { Select } from './Select';
-import { alertDialog, confirmDialog } from './confirm';
+import { Modal } from './Modal';
+import { confirmDialog } from './confirm';
 
 interface Section {
   key: string;
@@ -16,6 +18,29 @@ interface Section {
   fixed: boolean;
 }
 
+interface PendingDelete {
+  category: Category;
+  targets: Category[];
+  usage: CategoryUsage;
+}
+
+function targetLabel(category: Category): string {
+  return category.type === 'income'
+    ? category.name
+    : `${category.name} (${groupLabel(categoryGroup(category) ?? 'need')})`;
+}
+
+function usageSummary(usage: CategoryUsage): string {
+  const parts: string[] = [];
+  if (usage.transactions > 0) {
+    parts.push(`${usage.transactions} transaction${usage.transactions === 1 ? '' : 's'}`);
+  }
+  if (usage.recurring > 0) {
+    parts.push(`${usage.recurring} recurring entr${usage.recurring === 1 ? 'y' : 'ies'}`);
+  }
+  return parts.join(' and ');
+}
+
 export function CategoriesPanel({ store }: { store: Store }) {
   const { data, update } = store;
   const cur = data.settings.currency;
@@ -23,6 +48,7 @@ export function CategoriesPanel({ store }: { store: Store }) {
   const [type, setType] = useState<TxType>('expense');
   const [group, setGroup] = useState<CategoryGroup>('need');
   const [error, setError] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   const expenses = data.categories.filter((c) => c.type === 'expense');
   const income = data.categories.filter((c) => c.type === 'income');
@@ -60,23 +86,28 @@ export function CategoriesPanel({ store }: { store: Store }) {
     update((p) => ({ ...p, categories: p.categories.map((c) => (c.id === id ? { ...c, monthlyBudget: cents } : c)) }));
   }
 
-  async function remove(id: string) {
-    const used = data.transactions.some((t) => t.categoryId === id);
-    if (used) {
-      await alertDialog(
-        'This category is used by transactions. Reassign or delete those transactions first.',
-        'Category in use',
-      );
+  async function remove(category: Category) {
+    const usage = categoryUsage(data, category.id);
+
+    // Nothing points at it, so the simple confirm is still the whole story.
+    if (usage.transactions === 0 && usage.recurring === 0) {
+      const ok = await confirmDialog({
+        title: 'Delete this category?',
+        message: 'It is removed from the category list. This cannot be undone.',
+        confirmLabel: 'Delete',
+        tone: 'danger',
+      });
+      if (!ok) return;
+      update((p) => ({ ...p, categories: p.categories.filter((c) => c.id !== category.id) }));
       return;
     }
-    const ok = await confirmDialog({
-      title: 'Delete this category?',
-      message: 'It is removed from the category list. This cannot be undone.',
-      confirmLabel: 'Delete',
-      tone: 'danger',
+
+    // In use: offer to move every transaction and recurring rule before deleting it.
+    setPendingDelete({
+      category,
+      targets: eligibleTargets(data.categories, category),
+      usage,
     });
-    if (!ok) return;
-    update((p) => ({ ...p, categories: p.categories.filter((c) => c.id !== id) }));
   }
 
   const sections: Section[] = [
@@ -136,7 +167,7 @@ export function CategoriesPanel({ store }: { store: Store }) {
                       )}
                       <td style={{ textAlign: 'right' }}>
                         {!s.fixed && (
-                          <button className="btn small danger" onClick={() => remove(c.id)}>Delete</button>
+                          <button className="btn small danger" onClick={() => remove(c)}>Delete</button>
                         )}
                       </td>
                     </tr>
@@ -188,6 +219,90 @@ export function CategoriesPanel({ store }: { store: Store }) {
         <button className="btn primary" onClick={add}>Add category</button>
       </div>
       {error && <p className="error">{error}</p>}
+
+      {pendingDelete && (
+        <DeleteCategoryDialog
+          key={pendingDelete.category.id}
+          category={pendingDelete.category}
+          targets={pendingDelete.targets}
+          usage={pendingDelete.usage}
+          onMerge={(toId) =>
+            update((p) => mergeCategory(p, pendingDelete.category.id, toId))
+          }
+          onClosed={() => setPendingDelete(null)}
+        />
+      )}
     </>
+  );
+}
+
+function DeleteCategoryDialog({
+  category,
+  targets,
+  usage,
+  onMerge,
+  onClosed,
+}: {
+  category: Category;
+  targets: Category[];
+  usage: CategoryUsage;
+  onMerge: (toId: string) => void;
+  onClosed: () => void;
+}) {
+  const [targetId, setTargetId] = useState(targets[0]?.id ?? '');
+  const selected = targets.find((c) => c.id === targetId);
+
+  return (
+    <Modal title={`Delete ${category.name}?`} onClose={onClosed}>
+      {(close) => (
+        <>
+          <p className="confirm-message">
+            {usageSummary(usage)} {usage.transactions + usage.recurring === 1 ? 'uses' : 'use'} this
+            category. Choose where they should go, then it is deleted.
+          </p>
+
+          {targets.length > 0 ? (
+            <label style={{ marginTop: 16 }}>
+              Move them to
+              <Select
+                value={targetId}
+                ariaLabel="Category to move entries to"
+                options={targets.map((c) => ({ value: c.id, label: targetLabel(c) }))}
+                onChange={setTargetId}
+              />
+            </label>
+          ) : (
+            <div className="group-note" style={{ marginTop: 16 }}>
+              <span className="badge warn">No target</span>
+              <span className="muted">
+                Add another {category.type === 'income' ? 'income' : 'expense'} category first — these entries
+                need somewhere to go.
+              </span>
+            </div>
+          )}
+
+          {category.monthlyBudget !== null && (
+            <p className="muted small" style={{ margin: '10px 0 0' }}>
+              Its monthly budget is removed; {selected ? `${selected.name} keeps its own` : 'the target keeps its own'}.
+            </p>
+          )}
+
+          <div className="modal-actions">
+            <button className="btn" onClick={close}>Cancel</button>
+            <button
+              className="btn danger-solid"
+              disabled={!targetId}
+              onClick={() => {
+                if (!targetId) return;
+                onMerge(targetId);
+                close();
+              }}
+            >
+              Move &amp; delete
+            </button>
+          </div>
+        </>
+      )}
+    </Modal>
   );
 }

@@ -28,6 +28,12 @@
   --shadow: 0 1px 2px rgba(11, 26, 20, .04), 0 18px 40px -30px rgba(11, 26, 20, .4);
   --display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
   --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* One motion language for pages, cards and dialogs. */
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-spring: cubic-bezier(.22, 1.2, .36, 1);
+  --dur-page: 240ms;
+  --dur-sheet: 280ms;
+  --dur-exit: 160ms;
   font-family: var(--sans);
   color: var(--text);
   background: var(--cream);
@@ -142,6 +148,9 @@ h1, h2, h3 { font-family: var(--display); }
 .rail-link:active { transform: scale(.94); }
 
 .main { padding: 30px 38px 72px; min-width: 0; width: 100%; max-width: 1320px; margin: 0 auto; }
+
+/* One transition per tab switch, instead of every card animating on mount. */
+.page-view { animation: page-in var(--dur-page) var(--ease-out) both; }
 
 /* ---------- Page headers ---------- */
 .topbar {
@@ -437,10 +446,18 @@ label {
   position: fixed; inset: 0; background: rgba(8, 22, 16, .48); backdrop-filter: blur(6px);
   display: grid; place-items: center; padding: 20px; z-index: 50;
 }
+/* The frame owns the entrance/exit motion; the sheet below owns its scroll and elastic pull,
+   so a drag can never fight the opening transform. */
+.modal-frame {
+  width: min(560px, 100%); max-height: 90vh;
+  animation: modal-in .24s var(--ease-out) both;
+}
 .modal {
-  background: var(--card); border-radius: 26px; padding: 28px; width: min(560px, 100%);
+  background: var(--card); border-radius: 26px; padding: 28px; width: 100%;
   max-height: 90vh; overflow: auto; border: 1px solid rgba(255, 255, 255, .7);
   box-shadow: 0 50px 90px -40px rgba(0, 0, 0, .55);
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  transition: transform 320ms var(--ease-spring);
 }
 .modal h2 { margin: 0 0 18px; font-size: 22px; letter-spacing: -.02em; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
@@ -449,6 +466,7 @@ label {
 .confirm { width: min(420px, 100%); }
 .confirm h2 { margin-bottom: 8px; }
 .confirm-message { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.confirm-backdrop .modal { animation: modal-in .24s var(--ease-out) both; }
 
 /* ---------- Group split ---------- */
 .mix-body { display: flex; align-items: center; gap: 30px; flex-wrap: wrap; }
@@ -501,6 +519,8 @@ label {
   .rail-label { display: block; }
 
   .main { padding: 18px 14px calc(104px + env(safe-area-inset-bottom)); }
+  /* Fade only: vertical movement under the fixed bottom nav feels like the page is jumping. */
+  .page-view { animation: page-fade 160ms ease-out both; }
 
   .topbar { flex-direction: column; align-items: stretch; gap: 14px; margin-bottom: 18px; }
   .page-head h1 { font-size: clamp(28px, 8.5vw, 36px); }
@@ -544,10 +564,13 @@ label {
   .btn.small { min-height: 38px; }
 
   .modal-backdrop { place-items: end center; padding: 0; }
+  .modal-frame {
+    width: 100%; max-width: 100%; max-height: 92dvh;
+    animation: sheet-in var(--dur-sheet) var(--ease-out) both;
+  }
   .modal {
     width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; max-height: 92dvh;
     padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
-    animation: sheet-in .24s cubic-bezier(.2, .8, .3, 1) both;
   }
   .modal-actions { position: sticky; bottom: 0; background: var(--card); padding-top: 12px; }
   .modal-actions .btn { flex: 1; }
@@ -587,14 +610,22 @@ label {
 /* ---------- Motion ---------- */
 @keyframes pop-in { from { opacity: 0; transform: translateY(-6px) scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes modal-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
-@keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes page-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes modal-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) scale(.99); } }
 @keyframes grow-up { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-@keyframes sheet-in { from { opacity: .7; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes sheet-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(14px); } }
 
 .modal-backdrop { animation: fade-in .18s ease both; }
-.modal { animation: modal-in .22s cubic-bezier(.2, .8, .3, 1) both; }
-.card { animation: rise-in .3s ease both; }
+.modal-backdrop.is-closing { animation: fade-out var(--dur-exit) ease both; }
+.modal-backdrop.is-closing .modal-frame { animation: modal-out var(--dur-exit) ease both; }
+/* Same specificity as the rule above, so the mobile exit must come after it. */
+@media (max-width: 760px) {
+  .modal-backdrop.is-closing .modal-frame { animation: sheet-out var(--dur-exit) ease both; }
+}
 .bar { animation: grow-up .55s cubic-bezier(.2, .8, .3, 1) both; }
 .progress > span { transition: width .45s ease; }
 

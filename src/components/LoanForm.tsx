@@ -26,7 +26,7 @@ export function LoanForm({ store, direction, existing, onClose }: Props) {
   const [note, setNote] = useState(existing?.note ?? '');
   const [error, setError] = useState('');
 
-  function save() {
+  function save(close: () => void) {
     const cents = parseAmount(principal);
     if (!counterparty.trim()) return setError('Enter a name.');
     if (Number.isNaN(cents) || cents <= 0) return setError('Enter a valid amount greater than 0.');
@@ -72,52 +72,56 @@ export function LoanForm({ store, direction, existing, onClose }: Props) {
         ],
       }));
     }
-    onClose();
+    close();
   }
 
   return (
     <Modal title={existing ? 'Edit loan' : isBorrowed ? 'Record money you borrowed' : 'Record money you lent'} onClose={onClose}>
-      <div className="form-grid">
-        <label className="full">
-          {isBorrowed ? 'Borrowed from' : 'Lent to'}
-          <input value={counterparty} onChange={(e) => setCounterparty(e.target.value)} placeholder="Name" />
-        </label>
-        <label>
-          Amount ({currencySymbol(data.settings.currency)})
-          <input inputMode="decimal" placeholder="0.00" value={principal} onChange={(e) => setPrincipal(e.target.value)} />
-        </label>
-        <label>
-          Date
-          <DatePicker value={date} onChange={setDate} clearable={false} />
-        </label>
-        <label>
-          Due date (optional)
-          <DatePicker value={dueDate} onChange={setDueDate} placeholder="No due date" />
-        </label>
-        <label>
-          Account
-          <Select
-            value={accountId}
-            ariaLabel="Account"
-            options={[{ value: '', label: 'None' }, ...data.accounts.map((a) => ({ value: a.id, label: a.name }))]}
-            onChange={setAccountId}
-          />
-        </label>
-        <label className="full">
-          Note
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
-        </label>
-      </div>
-      {existing && existing.repayments.length > 0 && (
-        <p className="muted" style={{ margin: '10px 0 0', fontSize: 12 }}>
-          Repayments are kept; the amount cannot drop below {formatMoney(repaidAmount(existing), data.settings.currency)}.
-        </p>
+      {(close) => (
+        <>
+          <div className="form-grid">
+            <label className="full">
+              {isBorrowed ? 'Borrowed from' : 'Lent to'}
+              <input value={counterparty} onChange={(e) => setCounterparty(e.target.value)} placeholder="Name" />
+            </label>
+            <label>
+              Amount ({currencySymbol(data.settings.currency)})
+              <input inputMode="decimal" placeholder="0.00" value={principal} onChange={(e) => setPrincipal(e.target.value)} />
+            </label>
+            <label>
+              Date
+              <DatePicker value={date} onChange={setDate} clearable={false} />
+            </label>
+            <label>
+              Due date (optional)
+              <DatePicker value={dueDate} onChange={setDueDate} placeholder="No due date" />
+            </label>
+            <label>
+              Account
+              <Select
+                value={accountId}
+                ariaLabel="Account"
+                options={[{ value: '', label: 'None' }, ...data.accounts.map((a) => ({ value: a.id, label: a.name }))]}
+                onChange={setAccountId}
+              />
+            </label>
+            <label className="full">
+              Note
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
+            </label>
+          </div>
+          {existing && existing.repayments.length > 0 && (
+            <p className="muted" style={{ margin: '10px 0 0', fontSize: 12 }}>
+              Repayments are kept; the amount cannot drop below {formatMoney(repaidAmount(existing), data.settings.currency)}.
+            </p>
+          )}
+          {error && <p className="error">{error}</p>}
+          <div className="modal-actions">
+            <button className="btn" onClick={close}>Cancel</button>
+            <button className="btn primary" onClick={() => save(close)}>{existing ? 'Save changes' : 'Save'}</button>
+          </div>
+        </>
       )}
-      {error && <p className="error">{error}</p>}
-      <div className="modal-actions">
-        <button className="btn" onClick={onClose}>Cancel</button>
-        <button className="btn primary" onClick={save}>{existing ? 'Save changes' : 'Save'}</button>
-      </div>
     </Modal>
   );
 }

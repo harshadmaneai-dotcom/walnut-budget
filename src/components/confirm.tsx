@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { lockScroll, unlockScroll } from '../lib/scrollLock';
 
 export interface ConfirmOptions {
   title: string;
@@ -46,6 +47,13 @@ export function ConfirmHost() {
       openDialog = null;
     };
   }, []);
+
+  // A confirm is a dialog too: the page underneath must not scroll while it is open.
+  useEffect(() => {
+    if (!pending) return;
+    lockScroll();
+    return unlockScroll;
+  }, [pending]);
 
   useEffect(() => {
     if (!pending) return;

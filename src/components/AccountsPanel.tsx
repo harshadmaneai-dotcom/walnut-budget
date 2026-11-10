@@ -51,18 +51,24 @@ export function AccountsPanel({ store }: { store: Store }) {
     setEditError('');
   }
 
-  function saveEdit() {
-    if (!editing) return;
+  function saveEdit(): boolean {
+    if (!editing) return false;
     const cents = editOpening.trim() === '' ? 0 : parseAmount(editOpening);
-    if (!editName.trim()) return setEditError('Enter an account name.');
-    if (Number.isNaN(cents)) return setEditError('Opening balance must be a valid number.');
+    if (!editName.trim()) {
+      setEditError('Enter an account name.');
+      return false;
+    }
+    if (Number.isNaN(cents)) {
+      setEditError('Opening balance must be a valid number.');
+      return false;
+    }
     update((p) => ({
       ...p,
       accounts: p.accounts.map((a) =>
         a.id === editing.id ? { ...a, name: editName.trim(), kind: editKind, openingBalance: cents } : a,
       ),
     }));
-    setEditing(null);
+    return true;
   }
 
   async function remove(id: string) {
@@ -143,38 +149,49 @@ export function AccountsPanel({ store }: { store: Store }) {
 
       {editing && (
         <Modal title="Edit account" onClose={() => setEditing(null)}>
-          <div className="form-grid">
-            <label>
-              Name
-              <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Account name" />
-            </label>
-            <label>
-              Type
-              <Select
-                value={editKind}
-                ariaLabel="Account type"
-                options={KINDS}
-                onChange={(v) => setEditKind(v as Account['kind'])}
-              />
-            </label>
-            <label className="full">
-              Opening balance ({cur})
-              <input
-                inputMode="decimal"
-                value={editOpening}
-                onChange={(e) => setEditOpening(e.target.value)}
-                placeholder="0.00"
-              />
-            </label>
-            <p className="muted full" style={{ margin: 0, fontSize: 12 }}>
-              Changing this shifts the account balance by the difference; transactions are untouched.
-            </p>
-          </div>
-          {editError && <p className="error">{editError}</p>}
-          <div className="modal-actions">
-            <button className="btn" onClick={() => setEditing(null)}>Cancel</button>
-            <button className="btn primary" onClick={saveEdit}>Save changes</button>
-          </div>
+          {(close) => (
+            <>
+              <div className="form-grid">
+                <label>
+                  Name
+                  <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Account name" />
+                </label>
+                <label>
+                  Type
+                  <Select
+                    value={editKind}
+                    ariaLabel="Account type"
+                    options={KINDS}
+                    onChange={(v) => setEditKind(v as Account['kind'])}
+                  />
+                </label>
+                <label className="full">
+                  Opening balance ({cur})
+                  <input
+                    inputMode="decimal"
+                    value={editOpening}
+                    onChange={(e) => setEditOpening(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </label>
+                <p className="muted full" style={{ margin: 0, fontSize: 12 }}>
+                  Changing this shifts the account balance by the difference; transactions are untouched.
+                </p>
+              </div>
+              {editError && <p className="error">{editError}</p>}
+              <div className="modal-actions">
+                <button className="btn" onClick={close}>Cancel</button>
+                <button
+                  className="btn primary"
+                  onClick={() => {
+                    if (saveEdit()) close();
+                  }}
+                >
+                  Save changes
+                </button>
+              </div>
+            </>
+          )}
         </Modal>
       )}
     </>

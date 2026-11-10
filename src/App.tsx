@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useStore } from './store';
 import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
@@ -53,6 +53,12 @@ function BudgetApp({ userId }: { userId: string }) {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
+  // A new tab starts at the top; carrying the previous page's scroll into it feels broken.
+  // Layout effect, so the reset lands before the first paint of the fade.
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page]);
+
   if (page === 'landing') {
     return (
       <Landing
@@ -92,11 +98,13 @@ function BudgetApp({ userId }: { userId: string }) {
         <div className="mobile-brand">
           <Logo size={24} withWordmark />
         </div>
-        {page === 'dashboard' && <Dashboard store={store} />}
-        {page === 'transactions' && <Transactions store={store} />}
-        {page === 'loans' && <Loans store={store} />}
-        {page === 'reports' && <Reports store={store} />}
-        {page === 'settings' && <Settings store={store} />}
+        <div className="page-view" key={page}>
+          {page === 'dashboard' && <Dashboard store={store} />}
+          {page === 'transactions' && <Transactions store={store} />}
+          {page === 'loans' && <Loans store={store} />}
+          {page === 'reports' && <Reports store={store} />}
+          {page === 'settings' && <Settings store={store} />}
+        </div>
       </main>
       {store.syncError && (
         <div className="sync-banner" role="status" aria-live="polite">

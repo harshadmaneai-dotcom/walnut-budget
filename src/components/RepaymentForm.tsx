@@ -19,7 +19,7 @@ export function RepaymentForm({ store, loan, onClose }: { store: Store; loan: Lo
 
   const isBorrowed = loan.direction === 'borrowed';
 
-  function save() {
+  function save(close: () => void) {
     const cents = parseAmount(amount);
     if (Number.isNaN(cents) || cents <= 0) return setError('Enter a valid amount greater than 0.');
     if (cents > remaining) return setError(`Amount cannot exceed the remaining ${(remaining / 100).toFixed(2)}.`);
@@ -37,40 +37,44 @@ export function RepaymentForm({ store, loan, onClose }: { store: Store; loan: Lo
           : l,
       ),
     }));
-    onClose();
+    close();
   }
 
   return (
     <Modal title={isBorrowed ? `Repay ${loan.counterparty}` : `Record repayment from ${loan.counterparty}`} onClose={onClose}>
-      <p className="muted" style={{ marginTop: 0 }}>Remaining: {formatMoney(remaining, data.settings.currency)}</p>
-      <div className="form-grid">
-        <label>
-          Amount
-          <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-        </label>
-        <label>
-          Date
-          <DatePicker value={date} onChange={setDate} clearable={false} />
-        </label>
-        <label className="full">
-          Account (balance updates here)
-          <Select
-            value={accountId}
-            ariaLabel="Account"
-            options={[{ value: '', label: 'None' }, ...data.accounts.map((a) => ({ value: a.id, label: a.name }))]}
-            onChange={setAccountId}
-          />
-        </label>
-        <label className="full">
-          Note
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
-        </label>
-      </div>
-      {error && <p className="error">{error}</p>}
-      <div className="modal-actions">
-        <button className="btn" onClick={onClose}>Cancel</button>
-        <button className="btn primary" onClick={save}>Save</button>
-      </div>
+      {(close) => (
+        <>
+          <p className="muted" style={{ marginTop: 0 }}>Remaining: {formatMoney(remaining, data.settings.currency)}</p>
+          <div className="form-grid">
+            <label>
+              Amount
+              <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            </label>
+            <label>
+              Date
+              <DatePicker value={date} onChange={setDate} clearable={false} />
+            </label>
+            <label className="full">
+              Account (balance updates here)
+              <Select
+                value={accountId}
+                ariaLabel="Account"
+                options={[{ value: '', label: 'None' }, ...data.accounts.map((a) => ({ value: a.id, label: a.name }))]}
+                onChange={setAccountId}
+              />
+            </label>
+            <label className="full">
+              Note
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
+            </label>
+          </div>
+          {error && <p className="error">{error}</p>}
+          <div className="modal-actions">
+            <button className="btn" onClick={close}>Cancel</button>
+            <button className="btn primary" onClick={() => save(close)}>Save</button>
+          </div>
+        </>
+      )}
     </Modal>
   );
 }
