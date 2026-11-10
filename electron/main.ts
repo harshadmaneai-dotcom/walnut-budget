@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
 import path from 'node:path';
 import { autoUpdater } from 'electron-updater';
 
@@ -29,6 +29,8 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // A <webview> would create a second, less restricted renderer inside the app.
+      webviewTag: false,
     },
   });
 
@@ -41,11 +43,15 @@ function createWindow() {
     if (/^https?:\/\//.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
+  win.webContents.on('will-attach-webview', (event) => event.preventDefault());
+
+  // The window may only show the bundled app. Hash changes (how the app routes) never reach
+  // this event, so every navigation here is external and belongs in the user's browser.
   win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('file:')) {
-      event.preventDefault();
-      if (/^https?:\/\//.test(url)) void shell.openExternal(url);
-    }
+    const current = win.webContents.getURL().split('#')[0];
+    if (url.split('#')[0] === current) return;
+    event.preventDefault();
+    if (/^https?:\/\//.test(url)) void shell.openExternal(url);
   });
 
   if (isDev) win.webContents.openDevTools({ mode: 'detach' });
@@ -112,7 +118,16 @@ function setupUpdates() {
   }, 6 * 60 * 60 * 1000);
 }
 
+/** The renderer never needs the camera, microphone, location or notifications. */
+function hardenSessions() {
+  session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
+    callback(false),
+  );
+  session.defaultSession.setPermissionCheckHandler(() => false);
+}
+
 app.whenReady().then(() => {
+  hardenSessions();
   setupUpdates();
   createWindow();
   app.on('activate', () => {

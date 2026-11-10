@@ -2,6 +2,7 @@ import { createContext, createElement, useCallback, useContext, useEffect, useMe
 import type { Session, User } from '@supabase/supabase-js';
 import { backendConfigured, supabase } from './supabase';
 import { WEB_ORIGIN } from './downloads';
+import { clearCached, isDirty } from './storage';
 
 export interface AuthState {
   /** Null until the stored session has been checked. */
@@ -99,8 +100,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
+    const { data } = await supabase.auth.getSession();
+    const userId = data.session?.user.id;
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    // Only drop the local copy once the cloud has everything, so an offline edit is never
+    // lost; and leaving nothing behind means a shared device shows no trace of the budget.
+    if (userId && !isDirty(userId)) clearCached(userId);
   }, []);
 
   const value = useMemo<AuthState>(

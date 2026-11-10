@@ -73,7 +73,8 @@ The old single-user table (`budget_tracker_data`) is left untouched as a backup.
 
 The desktop app is the same web bundle wrapped in Electron (`electron/main.ts`, `electron/preload.ts`). It loads `dist/index.html` from disk. Compile it with `npm run desktop:compile` (runs as part of the desktop scripts), which outputs to `dist-electron/`.
 
-- **Windows:** `npm run desktop` produces an unsigned NSIS installer. Windows SmartScreen will warn about it until a code-signing certificate is added.
+- **Windows:** `npm run desktop` produces an unsigned NSIS installer. Windows SmartScreen will warn about it until a code-signing certificate is added; that warning is separate from anything in the app.
+- **Renderer hardening:** context isolation on, sandbox on, node integration off, `<webview>` disabled, every permission request denied, and navigation outside the bundled page is blocked and handed to the default browser.
 - **macOS:** `npm run desktop:mac` must run on a Mac. Code signing and notarization are not configured.
 - **Sign-up links:** confirmation emails redirect to the hosted site, not `file://`. Add the hosted origin to Authentication → URL Configuration in Supabase, and set `WEB_ORIGIN` in `src/lib/downloads.ts`.
 - **Downloads:** `npm run release` publishes the installer to a GitHub Release; the landing page links to the stable `releases/latest/download/Walnut-Setup.exe` URL.
@@ -85,7 +86,10 @@ The Android app is the same web bundle wrapped in Capacitor (`android/`, `capaci
 
 - **Updates:** Settings → Android app → **Check for updates**, or the banner that appears on launch when a newer build exists. The APK downloads in-app (`ApkUpdaterPlugin.java`) and opens the system installer, so the only thing the user taps is Android's own Install confirmation. Android asks once to allow installs from Walnut.
 - **Version:** `android/app/build.gradle` reads `package.json` (the only version number in the project) and derives `versionCode` as `major*10000 + minor*100 + patch`.
-- **Signing:** builds use the committed `android/app/walnut-debug.jks`. Android refuses an update whose signature differs, so the release workflow pins the certificate and fails if it ever changes. Replacing that key would force every installed app to be uninstalled first.
+- **Signing:** releases are built with `assembleRelease` and signed by the committed `android/app/walnut-debug.jks` through the `release` signing config. The file keeps its historical name, but it is the app's release identity: Android refuses an update whose signature differs, so the workflow pins the certificate and fails if it ever changes. Never ship `assembleDebug` — a debuggable APK lets adb read the signed-in session and is what security scanners flag.
+- **What the workflow checks:** `versionName`/`versionCode` match `package.json`, the manifest is not debuggable, the APK is signed with the v2 and v3 schemes, and the certificate equals `EXPECTED_APK_CERT`.
+- **Update integrity:** `ApkUpdaterPlugin` only hands a downloaded APK to the installer when its signing certificate matches the installed app. A tampered or substituted download is deleted instead of installed.
+- **Known weakness:** the keystore password is still `walnut`, so anyone with read access to this repository can sign a build that Android would accept as an update. Fixing that means re-encrypting the same key under a strong password (`keytool -importkeystore`), which preserves the certificate and therefore existing installs. Do it with the original file backed up.
 
 ## Releasing
 

@@ -27,18 +27,35 @@ android {
     }
     signingConfigs {
         // Committed on purpose: Android only installs an update whose signature matches the
-        // installed app, so local and CI builds must share one key.
+        // installed app, so local and CI builds must share one key. The password is a known
+        // weakness documented in the README; replacing it needs a re-encrypted copy of this
+        // same key so the certificate, and therefore existing installs, stay valid.
         debug {
             storeFile file('walnut-debug.jks')
             storePassword 'walnut'
             keyAlias 'walnut'
             keyPassword 'walnut'
         }
+        // What ships. Same key and certificate as the debug config on purpose: only the build
+        // type changes, so installed apps keep updating instead of demanding a reinstall.
+        release {
+            storeFile file('walnut-debug.jks')
+            storePassword 'walnut'
+            keyAlias 'walnut'
+            keyPassword 'walnut'
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
+        }
     }
     buildTypes {
         release {
+            // Never ship a debuggable APK: it lets adb read the app's session token and budget
+            // data, and it is the main reason security scanners treat the download as unsafe.
+            debuggable false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }

@@ -3,6 +3,9 @@ package app.walnut.mobile;
 import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -19,6 +22,10 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.File;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Downloads an update APK with DownloadManager and hands it to the system installer.
@@ -51,6 +58,50 @@ public class ApkUpdaterPlugin extends Plugin {
 
     private File updateFile() {
         return new File(getContext().getExternalFilesDir(null), UPDATE_DIR + File.separator + UPDATE_FILE);
+    }
+
+    /** SHA-256 of a signing certificate, hex encoded. */
+    private static String fingerprint(Signature signature) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(signature.toByteArray());
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte b : digest) hex.append(String.format("%02x", b & 0xff));
+            return hex.toString();
+        } catch (NoSuchAlgorithmException error) {
+            return null;
+        }
+    }
+
+    /**
+     * True when the downloaded APK is signed by the same certificate as the installed app.
+     * Android would refuse a mismatched update anyway, but checking first means a tampered or
+     * substituted download is deleted instead of being handed to the installer.
+     */
+    @SuppressWarnings("deprecation")
+    private boolean signedWithInstalledKey(File apk) {
+        PackageManager manager = getContext().getPackageManager();
+        PackageInfo archive = manager.getPackageArchiveInfo(apk.getAbsolutePath(), PackageManager.GET_SIGNATURES);
+        if (archive == null || !getContext().getPackageName().equals(archive.packageName)) return false;
+        if (archive.signatures == null || archive.signatures.length == 0) return false;
+
+        try {
+            PackageInfo installed = manager.getPackageInfo(
+                getContext().getPackageName(), PackageManager.GET_SIGNATURES);
+            if (installed.signatures == null || installed.signatures.length == 0) return false;
+
+            Set<String> expected = new HashSet<>();
+            for (Signature signature : installed.signatures) {
+                String value = fingerprint(signature);
+                if (value != null) expected.add(value);
+            }
+            for (Signature signature : archive.signatures) {
+                String value = fingerprint(signature);
+                if (value != null && expected.contains(value)) return true;
+            }
+        } catch (PackageManager.NameNotFoundException error) {
+            return false;
+        }
+        return false;
     }
 
     private boolean canInstallPackages() {
@@ -86,6 +137,13 @@ public class ApkUpdaterPlugin extends Plugin {
             return;
         }
 
+        // An update must never travel over plain HTTP.
+        Uri uri = Uri.parse(url);
+        if (!"https".equals(uri.getScheme())) {
+            call.reject("Updates must be downloaded over HTTPS");
+            return;
+        }
+
         File target = updateFile();
         File directory = target.getParentFile();
         if (directory != null && !directory.exists() && !directory.mkdirs()) {
@@ -98,7 +156,7 @@ public class ApkUpdaterPlugin extends Plugin {
             return;
         }
 
-        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+        DownloadManager.Request request = new DownloadManager.Request(uri);
         request.setTitle("Walnut update");
         request.setDescription("Downloading the new version");
         request.setMimeType("application/vnd.android.package-archive");
@@ -166,6 +224,13 @@ public class ApkUpdaterPlugin extends Plugin {
         File apk = updateFile();
         if (!apk.exists()) {
             call.reject("No downloaded update");
+            return;
+        }
+        if (!signedWithInstalledKey(apk)) {
+            // Never hand an unsigned or foreign-signed build to the installer.
+            //noinspection ResultOfMethodCallIgnored
+            apk.delete();
+            call.reject("The downloaded update is not signed by Walnut and was discarded");
             return;
         }
         if (!canInstallPackages()) {

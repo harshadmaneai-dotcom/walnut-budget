@@ -82,18 +82,20 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
+      # assembleRelease, not assembleDebug: a debuggable APK lets adb read the signed-in
+      # session and is what security scanners flag as unsafe.
       - name: Build APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       # The version comes from package.json and the key must match the installed app,
       # otherwise Android refuses the update and users would have to reinstall.
-      - name: Verify version and signature
+      - name: Verify version, manifest and signature
         run: |
           set -euo pipefail
-          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          APK=android/app/build/outputs/apk/release/app-release.apk
           VERSION=$(node -p "require('./package.json').version")
           EXPECTED_CODE=$(node -e "const [a,b,c]=require('./package.json').version.split('.').map(Number);console.log(a*10000+b*100+c)")
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)
@@ -101,7 +103,19 @@ jobs:
           echo "$BADGING" | head -1
           echo "$BADGING" | grep -q "versionName='$VERSION'" || { echo "::error::APK versionName is not $VERSION"; exit 1; }
           echo "$BADGING" | grep -q "versionCode='$EXPECTED_CODE'" || { echo "::error::APK versionCode is not $EXPECTED_CODE"; exit 1; }
-          SIGNER=$("$BUILD_TOOLS"/apksigner verify --print-certs "$APK" | grep 'SHA-256 digest' | head -1 | awk '{print $NF}' | tr '[:lower:]' '[:upper:]')
+
+          # Shipping a debuggable build is the defect this release pipeline exists to prevent.
+          if "$BUILD_TOOLS"/aapt2 dump xmltree --file AndroidManifest.xml "$APK" | grep -q 'debuggable.*=true'; then
+            echo "::error::the release APK is debuggable"
+            exit 1
+          fi
+
+          VERIFY=$("$BUILD_TOOLS"/apksigner verify --print-certs --verbose "$APK")
+          echo "$VERIFY" | grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' \
+            || { echo "::error::APK is not signed with the v2 scheme"; exit 1; }
+          echo "$VERIFY" | grep -q 'Verified using v3 scheme (APK Signature Scheme v3): true' \
+            || { echo "::error::APK is not signed with the v3 scheme"; exit 1; }
+          SIGNER=$(echo "$VERIFY" | grep 'SHA-256 digest' | head -1 | awk '{print $NF}' | tr '[:lower:]' '[:upper:]')
           echo "signer: $SIGNER"
           if [ "$SIGNER" != "$EXPECTED_APK_CERT" ]; then
             echo "::error::APK is signed by $SIGNER, not the pinned key. Installed apps would refuse the update."
@@ -111,7 +125,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
   desktop:
@@ -190,8 +204,8 @@ jobs:
       - name: Name the APK
         run: |
           set -euo pipefail
-          cp artifacts/android/app-debug.apk "artifacts/android/Walnut-${{ steps.v.outputs.version }}.apk"
-          cp artifacts/android/app-debug.apk artifacts/android/Walnut.apk
+          cp artifacts/android/app-release.apk "artifacts/android/Walnut-${{ steps.v.outputs.version }}.apk"
+          cp artifacts/android/app-release.apk artifacts/android/Walnut.apk
 
       - name: Publish
         uses: softprops/action-gh-release@v2

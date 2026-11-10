@@ -1,8 +1,13 @@
 import type { AppData } from './types';
 import { categoryGroup, groupLabel } from './groups';
 
+/** A leading =, +, - or @ makes spreadsheet software evaluate the cell as a formula. */
+const FORMULA_PREFIX_RE = /^[=+\-@\t\r]/;
+
 function escapeCell(value: string | number): string {
-  const s = String(value);
+  let s = String(value);
+  // Notes and names are user text, so neutralise anything a spreadsheet would execute.
+  if (FORMULA_PREFIX_RE.test(s)) s = `'${s}`;
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

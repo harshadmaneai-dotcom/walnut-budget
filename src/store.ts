@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { applyRecurring } from './lib/calc';
-import { isBlankData, loadCached, markLegacyClaimed, newId, normalizeData, saveData } from './lib/storage';
+import {
+  clearDirty,
+  isBlankData,
+  isDirty,
+  loadCached,
+  markDirty,
+  markLegacyClaimed,
+  newId,
+  normalizeData,
+  saveData,
+} from './lib/storage';
 import type { AppData } from './lib/types';
 import { todayISO } from './lib/format';
 import { fetchRemote, remoteEnabled, saveRemote } from './lib/remote';
@@ -26,6 +36,9 @@ function messageOf(err: unknown): string {
  * so a default document can't overwrite data. A failed write stays in the cache and is
  * reported, with a retry available.
  */
+/** Writes are coalesced: a burst of edits becomes one upsert, never one per keystroke. */
+const REMOTE_SAVE_DELAY_MS = 600;
+
 export function useStore(userId: string) {
   const [initial] = useState(() => loadCached(userId));
   const [data, setData] = useState<AppData>(() => withDueRecurring(initial.data));
@@ -37,6 +50,17 @@ export function useStore(userId: string) {
   const lastError = useRef<string | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
+
+  /** Serialises cloud writes, so an older document can never land after a newer one. */
+  const writeChain = useRef<Promise<unknown>>(Promise.resolve());
+  const pendingTimer = useRef<number | null>(null);
+  const latestData = useRef(data);
+  latestData.current = data;
+
+  /** The document as it stood when loading finished; anything after it is a real edit. */
+  const settled = useRef<AppData | null>(null);
+  /** True when this account has no cloud document yet, so the first save must create it. */
+  const remoteMissing = useRef(false);
 
   const reportError = useCallback((err: unknown) => {
     const message = messageOf(err);
@@ -51,7 +75,10 @@ export function useStore(userId: string) {
     fetchRemote(userId)
       .then((remote) => {
         if (cancelled) return;
-        if (remote) {
+        remoteMissing.current = remote === null;
+        // A cache holding unsynced edits wins over the cloud copy; otherwise the cloud is
+        // authoritative. This is what stops a reload mid-write from losing an edit.
+        if (remote && !isDirty(userId)) {
           setData(withDueRecurring(normalizeData(remote)));
         } else if (initial.legacy && isBlankData(initial.data)) {
           // First sign-in on this device: the old single-user budget becomes this account's.
@@ -73,23 +100,58 @@ export function useStore(userId: string) {
   }, [userId, initial.legacy, initial.data, reportError]);
 
   useEffect(() => {
+    // The local cache is written immediately, so nothing is lost if the app closes now.
     saveData(userId, data);
-    if (!ready) return;
-    if (!remoteEnabled) return;
+    if (!ready || !remoteEnabled) return;
+
+    // The first run after loading is not an edit: the cloud either already holds this
+    // document or the read failed. Writing on that run is what would let an offline launch
+    // overwrite a newer cloud copy later, so only a genuine change is persisted remotely.
+    if (settled.current === null) {
+      settled.current = data;
+      if (!remoteMissing.current) return;
+    }
+
+    markDirty(userId);
     setSyncStatus('syncing');
-    saveRemote(userId, data)
-      .then(() => {
-        setSyncStatus('synced');
-        setSyncError(null);
-      })
-      .catch(reportError);
+
+    latestData.current = data;
+    if (pendingTimer.current !== null) window.clearTimeout(pendingTimer.current);
+    pendingTimer.current = window.setTimeout(() => {
+      pendingTimer.current = null;
+      const snapshot = latestData.current;
+      writeChain.current = writeChain.current
+        .then(() => saveRemote(userId, snapshot))
+        .then(() => {
+          // Keep the unsynced marker until the newest document has reached the cloud.
+          if (latestData.current === snapshot) clearDirty(userId);
+          setSyncStatus('synced');
+          setSyncError(null);
+        })
+        .catch(reportError);
+    }, REMOTE_SAVE_DELAY_MS);
   }, [data, ready, userId, reportError]);
+
+  // Drop a queued write when this account stops being the one on screen.
+  useEffect(
+    () => () => {
+      if (pendingTimer.current !== null) {
+        window.clearTimeout(pendingTimer.current);
+        pendingTimer.current = null;
+      }
+    },
+    [],
+  );
 
   const retrySync = useCallback(() => {
     if (!remoteEnabled) return;
     setSyncStatus('syncing');
-    saveRemote(userId, dataRef.current)
+    const snapshot = dataRef.current;
+    markDirty(userId);
+    writeChain.current = writeChain.current
+      .then(() => saveRemote(userId, snapshot))
       .then(() => {
+        clearDirty(userId);
         setSyncStatus('synced');
         setSyncError(null);
       })

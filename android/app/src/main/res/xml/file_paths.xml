@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <external-path name="my_images" path="." />
-    <cache-path name="my_cache_images" path="." />
-    <!-- The updater downloads the new APK here so the installer can read it. -->
+    <!-- Only the folder the updater writes the downloaded APK to. Nothing else needs to be
+         reachable through this provider, so the rest of app storage stays private. -->
     <external-files-path name="updates" path="updates/" />
 </paths>

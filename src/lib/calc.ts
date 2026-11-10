@@ -1,5 +1,7 @@
 import type { AppData, Loan, RecurringRule, Transaction } from './types';
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 export type LoanStatus = 'open' | 'partial' | 'settled' | 'overdue';
 
 export function repaidAmount(loan: Loan): number {
@@ -107,6 +109,11 @@ export function applyRecurring(
 ): { created: Transaction[]; rules: RecurringRule[] } {
   const created: Transaction[] = [];
   const updated = rules.map((rule) => {
+    // A malformed date used to reach addMonths() and throw, white-screening the app on every
+    // launch. Skip such a rule rather than letting one bad record break startup.
+    const dateOk = (value: string | null) => value === null || ISO_DATE_RE.test(value);
+    if (!ISO_DATE_RE.test(rule.startDate) || !dateOk(rule.lastApplied)) return rule;
+
     let next = rule.lastApplied
       ? rule.frequency === 'weekly'
         ? addDays(rule.lastApplied, 7)
