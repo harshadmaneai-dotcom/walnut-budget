@@ -53,6 +53,7 @@ The old single-user table (`budget_tracker_data`) is left untouched as a backup.
 | `npm run desktop` | Build the Windows installer (`release/Walnut Setup <version>.exe`) |
 | `npm run desktop:dev` | Build and launch the Electron desktop app locally |
 | `npm run desktop:mac` | Build a macOS `.dmg` (run on a Mac) |
+| `npm run android:sync` | Build and copy the web bundle into the Android project |
 
 ## Desktop app
 
@@ -62,6 +63,14 @@ The desktop app is the same web bundle wrapped in Electron (`electron/main.ts`, 
 - **macOS:** `npm run desktop:mac` must run on a Mac. Code signing and notarization are not configured.
 - **Sign-up links:** confirmation emails redirect to the hosted site, not `file://`. Add the hosted origin to Authentication → URL Configuration in Supabase, and set `WEB_ORIGIN` in `src/lib/downloads.ts`.
 - **Downloads:** upload the installers to a GitHub Release, then set `DESKTOP_DOWNLOAD_URL` in `src/lib/downloads.ts`. The landing page links to that one constant.
+
+## Android app
+
+The Android app is the same web bundle wrapped in Capacitor (`android/`, `capacitor.config.ts`). The site serves a fixed `public/Walnut.apk`, and the Android workflow builds the same bundle as a debug APK.
+
+- **Updates:** Settings → Android app → **Check for updates** reads `public/app-version.json` from the deployed site and compares it with the build it is running. The APK opens in the browser (allow installs from the browser once) and installs over the previous version.
+- **Release checklist:** bump `package.json`, `versionName`/`versionCode` in `android/app/build.gradle`, `ANDROID_VERSION` in `src/lib/downloads.ts` and `public/app-version.json`, then `npm run android:sync`, `cd android && ./gradlew assembleDebug`, and replace `public/Walnut.apk` with `android/app/build/outputs/apk/debug/app-debug.apk`. The feed and the APK must ship in the same commit, or users are prompted for a build they already have. Use `android:sync` rather than a bare build, because `dist/Walnut.apk` is a copy of the previous release and would otherwise be bundled inside the new APK.
+- **Signing:** builds use the committed `android/app/walnut-debug.jks` so an update installs over the installed app. If that key is ever replaced, everyone has to uninstall once.
 
 ## Project layout
 

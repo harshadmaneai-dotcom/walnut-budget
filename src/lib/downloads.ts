@@ -13,7 +13,7 @@ export const ANDROID_DOWNLOAD_URL = '/Walnut.apk';
 
 /** Shown in the Apps section. Bump on release; the links themselves never change. */
 export const DESKTOP_VERSION = '2.0.10';
-export const ANDROID_VERSION = '2.0.10';
+export const ANDROID_VERSION = '2.0.11';
 
 /**
  * Hosted web origin used for auth redirects. The desktop app runs from file://,

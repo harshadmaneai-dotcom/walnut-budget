@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+/** Replaced with the package.json version by vite.config.ts. */
+declare const __APP_VERSION__: string;
+
 /** Update status the desktop shell pushes to the renderer (see electron/main.ts). */
 type WalnutUpdateState =
   | { status: 'available'; version: string }

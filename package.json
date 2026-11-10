@@ -1,7 +1,7 @@
 {
   "name": "walnut",
   "private": true,
-  "version": "2.0.10",
+  "version": "2.0.11",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,8 @@
     "desktop:compile": "tsc -p tsconfig.electron.json && node -e \"require('fs').writeFileSync('dist-electron/package.json', JSON.stringify({ type: 'commonjs' }) + '\\n')\"",
     "desktop": "npm run build && npm run desktop:compile && electron-builder --win nsis",
     "desktop:mac": "npm run build && npm run desktop:compile && electron-builder --mac dmg",
-    "desktop:dev": "npm run build && npm run desktop:compile && electron ."
+    "desktop:dev": "npm run build && npm run desktop:compile && electron .",
+    "android:sync": "npm run build && node -e \"require('fs').rmSync('dist/Walnut.apk', { force: true })\" && npx cap sync android"
   },
   "main": "dist-electron/main.js",
   "build": {

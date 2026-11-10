@@ -47,14 +47,14 @@ jobs:
       # Vite inlines these at build time. Without them the bundle ships with
       # backendConfigured = false and the app opens on its "needs backend"
       # notice instead of the sign-in screen.
-      - name: Build web app
-        run: npm run build
+      # android:sync also drops dist/Walnut.apk before syncing: it is the previous
+      # release served by the site, and copying it into the web assets would bundle
+      # one APK inside the next one.
+      - name: Build web app and sync Capacitor
+        run: npm run android:sync
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
-
-      - name: Sync Capacitor
-        run: npx cap sync android
 
       - name: Build APK
         run: |

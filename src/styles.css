@@ -79,6 +79,11 @@
 [data-theme="dark"] input:focus, [data-theme="dark"] select:focus, [data-theme="dark"] textarea:focus { background: #101b17; border-color: #6fae3a; box-shadow: 0 0 0 4px rgba(201, 242, 94, .18); }
 [data-theme="dark"] .tabs { background: #1d2a25; }
 [data-theme="dark"] .tabs .tab.active { background: var(--lime); color: var(--on-lime); }
+/* --ink is near-white in dark mode, so the light-mode treatment (#fff on --ink) would
+   paint the selected day white on white. Lime matches the active tab and rail link. */
+[data-theme="dark"] .dp-day.is-selected { background: var(--lime); color: var(--on-lime); }
+[data-theme="dark"] .dp-day.is-selected:hover { background: var(--lime-deep); color: var(--on-lime); }
+[data-theme="dark"] .dp-nav:hover { background: #244a3a; }
 [data-theme="dark"] input:focus, [data-theme="dark"] select:focus, [data-theme="dark"] textarea:focus, [data-theme="dark"] .dd-trigger:hover, [data-theme="dark"] .dp-trigger:hover, [data-theme="dark"] .dd.is-open .dd-trigger, [data-theme="dark"] .dp.is-open .dp-trigger { background: #101b17; }
 [data-theme="dark"] .auth-form input { background: #101b17; }
 [data-theme="dark"] .auth-tabs { background: #1d2a25; }
@@ -554,12 +559,14 @@ label {
   /* Transactions become cards: far easier to scan than a wide table. */
   .tx-table thead { display: none; }
   .tx-table, .tx-table tbody { display: block; }
+  /* The card surface follows the theme: a hardcoded white row left dark-theme text
+     unreadable (and Android's forced dark recoloured it on top of that). */
   .tx-table tr {
     display: grid; grid-template-columns: 1fr auto; gap: 3px 12px;
     padding: 14px; margin-bottom: 10px; border: 1px solid var(--border);
-    border-radius: 18px; background: #fff;
+    border-radius: 18px; background: var(--card);
   }
-  .tx-table tr:hover { background: #fff; }
+  .tx-table tr:hover { background: var(--card); }
   .tx-table td { border: 0; padding: 0; font-size: 14px; }
   .tx-table td:nth-child(1) { grid-column: 1 / -1; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
   .tx-table td:nth-child(2) { font-weight: 600; }
