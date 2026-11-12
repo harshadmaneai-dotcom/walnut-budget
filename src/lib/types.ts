@@ -33,6 +33,15 @@ export interface Transaction {
   recurringId?: string;
 }
 
+export interface Transfer {
+  id: string;
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  note: string;
+}
+
 export interface Repayment {
   id: string;
   amount: number;
@@ -76,6 +85,7 @@ export interface AppData {
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
+  transfers: Transfer[];
   loans: Loan[];
   recurring: RecurringRule[];
 }

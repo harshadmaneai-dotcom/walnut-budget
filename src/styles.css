@@ -79,6 +79,7 @@
 [data-theme="dark"] .dot-icon.g-need { background: #17372a; color: #7fdcaa; }
 [data-theme="dark"] .dot-icon.g-want { background: #3a2c1a; color: #e7a25a; }
 [data-theme="dark"] .dot-icon.g-investment { background: #1d2a44; color: #7aa6ef; }
+[data-theme="dark"] .dot-icon.g-transfer { background: #1b2f3b; color: #7ec8e8; }
 [data-theme="dark"] tbody tr:hover { background: #1b2b25; }
 [data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea { background: #101b17; color: var(--text); }
 [data-theme="dark"] input:hover, [data-theme="dark"] select:hover, [data-theme="dark"] textarea:hover { border-color: #3d5249; }
@@ -252,6 +253,10 @@ h1, h2, h3 { font-family: var(--display); }
 .list-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .list-row > div { min-width: 0; }
 .row-text { min-width: 0; overflow-wrap: anywhere; }
+.activity-main { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; }
+.activity-main .row-text { flex: 1 1 auto; }
+.row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-amount { flex: 0 0 auto; align-self: center; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .recurring-row { align-items: flex-start; }
 .row-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .list-row:last-child { border-bottom: none; }
@@ -263,6 +268,7 @@ h1, h2, h3 { font-family: var(--display); }
 .dot-icon.g-need { background: #e5f5ea; color: #0f6a44; }
 .dot-icon.g-want { background: #fdf0e2; color: #b2641c; }
 .dot-icon.g-investment { background: #e8eefc; color: #2e5fc4; }
+.dot-icon.g-transfer { background: #e6f1f7; color: #2a6f8f; }
 .dot-icon.g-income { background: var(--lime); color: var(--on-lime); }
 
 /* ---------- Tables ---------- */

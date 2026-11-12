@@ -5,8 +5,10 @@ import {
   applyRecurring,
   loanStatus,
   loanTotals,
+  monthTotals,
   remainingAmount,
   repaidAmount,
+  totalBalance,
 } from './calc';
 import { defaultData } from './storage';
 import type { AppData, Loan, RecurringRule } from './types';
@@ -65,6 +67,31 @@ describe('account balance', () => {
     };
     // 1000 + 200 - 50 - 30 (repaid a borrowed loan) + 20 (received on a lent loan) = 1140
     expect(accountBalance(data, 'a1')).toBe(1140_00);
+  });
+});
+
+describe('account transfers', () => {
+  it('moves money between accounts without changing totals or monthly income/expense', () => {
+    const data: AppData = {
+      ...defaultData(),
+      accounts: [
+        { id: 'cash', name: 'Cash', kind: 'cash', openingBalance: 100_00 },
+        { id: 'bank', name: 'SBI', kind: 'bank', openingBalance: 500_00 },
+      ],
+      transactions: [
+        { id: 't1', type: 'income', amount: 200_00, date: '2026-11-01', categoryId: 'c-salary', accountId: 'bank', note: '' },
+        { id: 't2', type: 'expense', amount: 50_00, date: '2026-11-02', categoryId: 'c-food', accountId: 'bank', note: '' },
+      ],
+      transfers: [
+        { id: 'tr1', fromAccountId: 'cash', toAccountId: 'bank', amount: 100_00, date: '2026-11-12', note: 'ATM deposit' },
+      ],
+    };
+
+    // Cash goes to zero, SBI receives the deposit, and the total is unchanged by moving it.
+    expect(accountBalance(data, 'cash')).toBe(0);
+    expect(accountBalance(data, 'bank')).toBe(750_00);
+    expect(totalBalance(data)).toBe(750_00);
+    expect(monthTotals(data.transactions, '2026-11')).toEqual({ income: 200_00, expense: 50_00 });
   });
 });
 

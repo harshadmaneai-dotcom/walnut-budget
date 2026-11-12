@@ -20,3 +20,6 @@ release
 
 # PWA icons must ship with the app bundle
 !public/*.png
+
+# Freebuff's local project marker and logs
+.freebuff/

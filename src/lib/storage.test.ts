@@ -75,6 +75,31 @@ describe('normalizeData', () => {
     expect(data.transactions.map((t) => t.amount)).toEqual([0, 0]);
   });
 
+  it('defaults transfers on documents saved before transfers existed', () => {
+    const legacy: Record<string, unknown> = { ...defaultData() };
+    delete legacy.transfers;
+    expect(normalizeData(legacy as never).transfers).toEqual([]);
+  });
+
+  it('normalizes transfers, drops same-account ones and survives a round trip', () => {
+    const data = normalizeData({
+      ...defaultData(),
+      accounts: [
+        { id: 'a-cash', name: 'Cash', kind: 'cash', openingBalance: 0 },
+        { id: 'a-bank', name: 'Bank', kind: 'bank', openingBalance: 0 },
+      ],
+      transfers: [
+        { id: 't1', fromAccountId: 'a-cash', toAccountId: 'a-bank', amount: 100_50, date: '2026-11-12', note: 'ATM' },
+        { id: 't2', fromAccountId: 'a-cash', toAccountId: 'a-cash', amount: 10_00, date: '2026-11-12', note: '' },
+      ],
+    } as never);
+
+    expect(data.transfers).toEqual([
+      { id: 't1', fromAccountId: 'a-cash', toAccountId: 'a-bank', amount: 100_50, date: '2026-11-12', note: 'ATM' },
+    ]);
+    expect(parseData(JSON.stringify(data)).transfers).toEqual(data.transfers);
+  });
+
   it('always leaves at least one account and one expense category', () => {
     const data = normalizeData({ ...defaultData(), accounts: [], categories: [] } as never);
     expect(data.accounts.length).toBeGreaterThan(0);

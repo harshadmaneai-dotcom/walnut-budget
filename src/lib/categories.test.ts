@@ -13,6 +13,7 @@ function sample(): AppData {
       { id: 'invest', name: 'Investments', type: 'expense', group: 'investment', monthlyBudget: null },
       { id: 'salary', name: 'Salary', type: 'income', monthlyBudget: null },
     ],
+    transfers: [],
     transactions: [
       { id: 't1', type: 'expense', amount: 100_00, date: '2026-01-02', categoryId: 'food', accountId: null, note: '' },
       { id: 't2', type: 'expense', amount: 200_00, date: '2026-01-03', categoryId: 'food', accountId: null, note: '' },

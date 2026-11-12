@@ -45,6 +45,10 @@ export function accountBalance(data: AppData, accountId: string): number {
     if (t.accountId !== accountId) continue;
     balance += t.type === 'income' ? t.amount : -t.amount;
   }
+  for (const transfer of data.transfers) {
+    if (transfer.fromAccountId === accountId) balance -= transfer.amount;
+    if (transfer.toAccountId === accountId) balance += transfer.amount;
+  }
   for (const loan of data.loans) {
     for (const r of loan.repayments) {
       if (r.accountId !== accountId) continue;

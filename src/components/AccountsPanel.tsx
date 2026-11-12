@@ -78,7 +78,7 @@ export function AccountsPanel({ store }: { store: Store }) {
     }
     const ok = await confirmDialog({
       title: 'Delete this account?',
-      message: 'Transactions linked to it are kept but become unlinked.',
+      message: 'Transactions linked to it are kept but become unlinked. Transfers involving it are removed.',
       confirmLabel: 'Delete',
       tone: 'danger',
     });
@@ -87,6 +87,7 @@ export function AccountsPanel({ store }: { store: Store }) {
       ...p,
       accounts: p.accounts.filter((a) => a.id !== id),
       transactions: p.transactions.map((t) => (t.accountId === id ? { ...t, accountId: null } : t)),
+      transfers: p.transfers.filter((t) => t.fromAccountId !== id && t.toAccountId !== id),
       loans: p.loans.map((l) => ({
         ...l,
         accountId: l.accountId === id ? null : l.accountId,

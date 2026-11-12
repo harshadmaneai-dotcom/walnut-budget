@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import type { Store } from '../store';
+import type { Transaction, Transfer } from '../lib/types';
 import { accountBalance, lastMonths, loanStatus, loanTotals, monthTotals, totalBalance, remainingAmount } from '../lib/calc';
 import { formatDate, formatMoney, monthLabel, todayISO } from '../lib/format';
 import { TransactionForm } from '../components/TransactionForm';
+import { TransferForm } from '../components/TransferForm';
 import { GroupDonut } from '../components/GroupDonut';
 import { Icon } from '../components/Icon';
 import { GROUPS, categoryGroup, groupSpend, groupTotal } from '../lib/groups';
+
+type RecentEntry =
+  | { kind: 'transaction'; tx: Transaction }
+  | { kind: 'transfer'; transfer: Transfer };
 
 export function Dashboard({ store }: { store: Store }) {
   const { data } = store;
@@ -13,6 +19,7 @@ export function Dashboard({ store }: { store: Store }) {
   const today = todayISO();
   const thisMonth = today.slice(0, 7);
   const [adding, setAdding] = useState(false);
+  const [transferring, setTransferring] = useState(false);
 
   const totals = monthTotals(data.transactions, thisMonth);
   const months = lastMonths(today, 6);
@@ -40,8 +47,20 @@ export function Dashboard({ store }: { store: Store }) {
       .filter((t) => t.type === 'expense' && t.categoryId === catId && t.date.startsWith(thisMonth))
       .reduce((s, t) => s + t.amount, 0);
 
-  const recent = [...data.transactions].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6);
   const cat = (id: string) => data.categories.find((c) => c.id === id);
+  const accountName = (id: string) =>
+    data.accounts.find((a) => a.id === id)?.name ?? 'Deleted account';
+
+  const recent: RecentEntry[] = [
+    ...data.transfers.map((transfer) => ({ kind: 'transfer' as const, transfer })),
+    ...data.transactions.map((tx) => ({ kind: 'transaction' as const, tx })),
+  ]
+    .sort((a, b) => {
+      const left = a.kind === 'transfer' ? a.transfer.date : a.tx.date;
+      const right = b.kind === 'transfer' ? b.transfer.date : b.tx.date;
+      return left < right ? 1 : left > right ? -1 : 0;
+    })
+    .slice(0, 6);
 
   const net = totals.income - totals.expense;
   const spentShare = totals.income > 0 ? Math.min(100, (totals.expense / totals.income) * 100) : 0;
@@ -55,6 +74,9 @@ export function Dashboard({ store }: { store: Store }) {
           <h1>Money, sorted<span className="accent">.</span></h1>
         </div>
         <div className="topbar-actions">
+          <button className="btn" onClick={() => setTransferring(true)}>
+            <Icon name="swap" size={17} /> Transfer
+          </button>
           <button className="btn primary" onClick={() => setAdding(true)}>
             <Icon name="plus" size={17} /> Add transaction
           </button>
@@ -189,7 +211,7 @@ export function Dashboard({ store }: { store: Store }) {
                   <div>{l.counterparty}</div>
                   <div className="meta">Due {formatDate(l.dueDate!)}</div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
+                <div className="row-amount">
                   <div>{formatMoney(remainingAmount(l), cur)}</div>
                   <span className={`badge ${st === 'overdue' ? 'down' : 'warn'}`}>{st === 'overdue' ? 'Overdue' : 'Due soon'}</span>
                 </div>
@@ -218,23 +240,45 @@ export function Dashboard({ store }: { store: Store }) {
         </section>
 
         <section className="card col-6">
-          <div className="card-head"><div><h2>Recent activity</h2><p>Latest transactions</p></div></div>
+          <div className="card-head"><div><h2>Recent activity</h2><p>Transactions and transfers</p></div></div>
           {recent.length === 0 && <div className="empty">No transactions yet. Add your first one above.</div>}
-          {recent.map((t) => {
+          {recent.map((entry) => {
+            if (entry.kind === 'transfer') {
+              const tr = entry.transfer;
+              const from = accountName(tr.fromAccountId);
+              const to = accountName(tr.toAccountId);
+              const title = `${from} → ${to}${tr.note ? ` · ${tr.note}` : ''}`;
+              return (
+                <div className="list-row" key={`transfer-${tr.id}`}>
+                  <div className="activity-main">
+                    <div className="dot-icon g-transfer">
+                      <Icon name="swap" size={17} />
+                    </div>
+                    <div className="row-text">
+                      <div className="row-title" title={title}>{from} → {to}{tr.note ? ` · ${tr.note}` : ''}</div>
+                      <div className="meta">{formatDate(tr.date)}</div>
+                    </div>
+                  </div>
+                  <div className="row-amount">{formatMoney(tr.amount, cur)}</div>
+                </div>
+              );
+            }
+            const t = entry.tx;
             const c = cat(t.categoryId);
             const grp = c && c.type === 'expense' ? categoryGroup(c) : null;
+            const title = `${c?.name ?? 'Other'}${t.note ? ` · ${t.note}` : ''}`;
             return (
-              <div className="list-row" key={t.id}>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div className="list-row" key={`tx-${t.id}`}>
+                <div className="activity-main">
                   <div className={`dot-icon ${grp ? `g-${grp}` : 'g-income'}`}>
                     <Icon name={t.type === 'income' ? 'arrowDown' : 'arrowUp'} size={17} />
                   </div>
                   <div className="row-text">
-                    <div>{c?.name ?? 'Other'}{t.note ? ` · ${t.note}` : ''}</div>
+                    <div className="row-title" title={title}>{title}</div>
                     <div className="meta">{formatDate(t.date)}</div>
                   </div>
                 </div>
-                <div className={t.type === 'income' ? 'pos' : 'neg'}>
+                <div className={`row-amount ${t.type === 'income' ? 'pos' : 'neg'}`}>
                   {t.type === 'income' ? '+' : '−'}{formatMoney(t.amount, cur)}
                 </div>
               </div>
@@ -244,6 +288,7 @@ export function Dashboard({ store }: { store: Store }) {
       </div>
 
       {adding && <TransactionForm store={store} onClose={() => setAdding(false)} />}
+      {transferring && <TransferForm store={store} onClose={() => setTransferring(false)} />}
     </>
   );
 }

@@ -7,6 +7,7 @@ import type {
   RecurringRule,
   Repayment,
   Transaction,
+  Transfer,
 } from './types';
 import { DEFAULT_CURRENCY } from './format';
 
@@ -16,7 +17,7 @@ export const STORAGE_PREFIX = 'walnut:data';
 export const LEGACY_STORAGE_KEY = 'budget-tracker:data';
 export const LEGACY_CLAIM_KEY = 'walnut:legacy-claimed';
 
-export const DATA_VERSION = 2;
+export const DATA_VERSION = 3;
 export const INVESTMENT_CATEGORY_ID = 'c-invest';
 
 export const DEFAULT_CATEGORIES: Category[] = [
@@ -42,6 +43,7 @@ export function defaultData(): AppData {
     accounts: [{ id: 'a-cash', name: 'Cash', kind: 'cash', openingBalance: 0 }],
     categories: DEFAULT_CATEGORIES,
     transactions: [],
+    transfers: [],
     loans: [],
     recurring: [],
   };
@@ -156,6 +158,27 @@ function normalizeTransactions(value: unknown): Transaction[] {
   return transactions;
 }
 
+function normalizeTransfers(value: unknown): Transfer[] {
+  const transfers: Transfer[] = [];
+  for (const entry of asArray(value)) {
+    const record = asRecord(entry);
+    if (!record || typeof record.id !== 'string' || !record.id) continue;
+    const fromAccountId = asOptionalId(record.fromAccountId);
+    const toAccountId = asOptionalId(record.toAccountId);
+    // A transfer needs both ends and they must be different accounts.
+    if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) continue;
+    transfers.push({
+      id: record.id,
+      fromAccountId,
+      toAccountId,
+      amount: asCents(record.amount),
+      date: asText(record.date),
+      note: asText(record.note),
+    });
+  }
+  return transfers;
+}
+
 function normalizeRepayments(value: unknown): Repayment[] {
   const repayments: Repayment[] = [];
   for (const entry of asArray(value)) {
@@ -256,6 +279,7 @@ export function normalizeData(data: AppData): AppData {
     accounts: accounts.length ? accounts : fallback.accounts,
     categories: migrateCategories(categories.length ? categories : fallback.categories),
     transactions: normalizeTransactions(source.transactions),
+    transfers: normalizeTransfers(source.transfers),
     loans: normalizeLoans(source.loans),
     recurring: normalizeRecurring(source.recurring),
   };
@@ -284,6 +308,7 @@ function keyFor(userId: string): string {
 export function isBlankData(data: AppData): boolean {
   return (
     data.transactions.length === 0 &&
+    data.transfers.length === 0 &&
     data.loans.length === 0 &&
     data.recurring.length === 0 &&
     data.accounts.every((a) => a.openingBalance === 0)
