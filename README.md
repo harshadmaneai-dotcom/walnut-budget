@@ -79,6 +79,8 @@ The desktop app is the same web bundle wrapped in Electron (`electron/main.ts`, 
 - **Sign-up links:** confirmation emails redirect to the hosted site, not `file://`. Add the hosted origin to Authentication → URL Configuration in Supabase, and set `WEB_ORIGIN` in `src/lib/downloads.ts`.
 - **Downloads:** `npm run release` publishes the installer to a GitHub Release; the landing page links to the stable `releases/latest/download/Walnut-Setup.exe` URL.
 - **Updates:** the installed app checks GitHub on launch, every six hours, and from Settings → Desktop app. `latest.yml` in the latest release is what drives it, so the release must always be marked "latest" (the Release workflow does that). The installer force-closes a running Walnut tree (see `installer/installer.nsh`) and the app relaunches after installing.
+- **Upgrades:** when replacing an existing install, the installer skips the legacy uninstaller. Walnut 2.0.14 and 2.0.15 shipped electron-builder's broken PowerShell running-app check, so their uninstaller could stop an upgrade with "Walnut cannot be closed" even when nothing was running. The new install overwrites the app tree and writes a fresh uninstaller and registry entry.
+- **Size:** the Windows installer is about 120 MB because it bundles Electron and Chromium. The Android APK is small because Android supplies the system WebView. Releases include a `.blockmap`, so `electron-updater` can download only changed blocks when the previous installer is cached; the first update from an older build may still be a full download.
 
 ## Android app
 

@@ -37,4 +37,14 @@
         ${EndIf}
       ${EndIf}
     ${EndIf}
+
+  ; Walnut 2.0.14 and 2.0.15 shipped with electron-builder's broken PowerShell process
+  ; check. Their uninstaller can fail its own check and block an upgrade behind
+  ; $(appCannotBeClosed) five times even when no Walnut process exists. This installer
+  ; replaces the app tree and writes a fresh uninstaller and registry entry, so skip the
+  ; legacy uninstaller during installation instead of letting it abort the upgrade.
+  !ifndef BUILD_UNINSTALLER
+    DeleteRegValue SHELL_CONTEXT "${UNINSTALL_REGISTRY_KEY}" "UninstallString"
+    DeleteRegValue SHELL_CONTEXT "${UNINSTALL_REGISTRY_KEY}" "QuietUninstallString"
+  !endif
 !macroend
