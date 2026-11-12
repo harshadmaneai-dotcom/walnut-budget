@@ -68,10 +68,15 @@ function DesktopUpdate() {
         )}
         {state?.status === 'downloaded' && (
           <button className="btn primary" onClick={() => void window.walnut?.installUpdate()}>
-            Restart &amp; install
+            Close &amp; install
           </button>
         )}
       </div>
+      {state?.status === 'downloaded' && (
+        <p className="muted small" style={{ marginTop: 12 }}>
+          Walnut will close and reopen to finish installing.
+        </p>
+      )}
       {state?.status === 'downloading' && (
         <div className="update-progress" aria-hidden="true" style={{ marginTop: 12 }}>
           <span style={{ width: `${state.percent}%` }} />

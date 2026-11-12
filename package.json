@@ -41,6 +41,7 @@
     },
     "nsis": {
       "artifactName": "Walnut-Setup-${version}.${ext}",
+      "include": "installer/installer.nsh",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },

@@ -93,7 +93,7 @@ function DesktopUpdateBanner() {
           {state.status === 'downloading'
             ? `Downloading… ${state.percent}%`
             : state.status === 'downloaded'
-              ? 'Restart Walnut to finish updating.'
+              ? 'Walnut will close and reopen to finish installing.'
               : `You are on ${current ? `v${current}` : 'an older version'}.`}
         </span>
       </div>
@@ -103,7 +103,7 @@ function DesktopUpdateBanner() {
         </div>
       ) : state.status === 'downloaded' ? (
         <button className="btn small primary" onClick={() => void window.walnut?.installUpdate()}>
-          Restart &amp; install
+          Close &amp; install
         </button>
       ) : (
         <button className="btn small primary" onClick={() => void window.walnut?.downloadUpdate()}>

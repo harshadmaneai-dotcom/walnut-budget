@@ -15,6 +15,9 @@ type UpdateState =
   | { status: 'downloaded'; version: string }
   | { status: 'error'; message: string };
 
+let updateStartupTimer: ReturnType<typeof setTimeout> | null = null;
+let updateIntervalTimer: ReturnType<typeof setInterval> | null = null;
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
@@ -89,7 +92,16 @@ function setupUpdates() {
   });
 
   ipcMain.handle('walnut:install', () => {
-    setImmediate(() => autoUpdater.quitAndInstall());
+    if (isDev) return;
+    setImmediate(() => {
+      try {
+        // Restart the app after the installer finishes. The NSIS include force-closes a
+        // main process that hangs, so this does not leave a windowless process behind.
+        autoUpdater.quitAndInstall(false, true);
+      } catch (error) {
+        broadcast({ status: 'error', message: error instanceof Error ? error.message : String(error) });
+      }
+    });
   });
 
   if (isDev) return;
@@ -108,12 +120,12 @@ function setupUpdates() {
   );
 
   // Late enough that the first paint never waits on the network.
-  setTimeout(() => {
+  updateStartupTimer = setTimeout(() => {
     void autoUpdater.checkForUpdates().catch(() => {});
   }, 4000);
 
   // A window can stay open for days, so ask again periodically instead of only at launch.
-  setInterval(() => {
+  updateIntervalTimer = setInterval(() => {
     void autoUpdater.checkForUpdates().catch(() => {});
   }, 6 * 60 * 60 * 1000);
 }
@@ -126,15 +138,42 @@ function hardenSessions() {
   session.defaultSession.setPermissionCheckHandler(() => false);
 }
 
-app.whenReady().then(() => {
-  hardenSessions();
-  setupUpdates();
-  createWindow();
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-});
+// A second installation/launch must not leave a second Walnut process holding the installer's
+// files open. Focus the existing window instead.
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  });
+
+  app.on('before-quit', () => {
+    if (updateStartupTimer !== null) {
+      clearTimeout(updateStartupTimer);
+      updateStartupTimer = null;
+    }
+    if (updateIntervalTimer !== null) {
+      clearInterval(updateIntervalTimer);
+      updateIntervalTimer = null;
+    }
+  });
+
+  app.whenReady().then(() => {
+    hardenSessions();
+    setupUpdates();
+    createWindow();
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
+  });
+}

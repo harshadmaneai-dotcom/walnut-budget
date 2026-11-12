@@ -2,7 +2,7 @@
 
 A multi-user budget tracker for the browser. Every account signs in with an email and password, and keeps its own budget: spending across three groups — Needs, Expenses and Investments — plus income, accounts, loans with partial repayments and due dates, monthly category budgets, recurring entries and reports. The dashboard ring chart splits the month across the three groups.
 
-Data lives in Supabase, one row per account, with a per-account `localStorage` cache for offline use. Row-level security means the publishable key shipped in the bundle can only ever reach the signed-in user's own row.
+Data lives in Supabase, one row per account, with a per-account `localStorage` cache for offline use. Row-level security means the publishable key shipped in the bundle can only ever reach the signed-in user's own row. While Walnut is open, it polls the row's `updated_at` every few seconds and pulls the document when another device saves, so the same account stays in sync across open devices. Writes are last-write-wins; concurrent edits are not merged.
 
 ## Live
 
@@ -78,7 +78,7 @@ The desktop app is the same web bundle wrapped in Electron (`electron/main.ts`, 
 - **macOS:** `npm run desktop:mac` must run on a Mac. Code signing and notarization are not configured.
 - **Sign-up links:** confirmation emails redirect to the hosted site, not `file://`. Add the hosted origin to Authentication → URL Configuration in Supabase, and set `WEB_ORIGIN` in `src/lib/downloads.ts`.
 - **Downloads:** `npm run release` publishes the installer to a GitHub Release; the landing page links to the stable `releases/latest/download/Walnut-Setup.exe` URL.
-- **Updates:** the installed app checks GitHub on launch, every six hours, and from Settings → Desktop app. `latest.yml` in the latest release is what drives it, so the release must always be marked "latest" (the Release workflow does that).
+- **Updates:** the installed app checks GitHub on launch, every six hours, and from Settings → Desktop app. `latest.yml` in the latest release is what drives it, so the release must always be marked "latest" (the Release workflow does that). The installer force-closes a running Walnut tree (see `installer/installer.nsh`) and the app relaunches after installing.
 
 ## Android app
 
