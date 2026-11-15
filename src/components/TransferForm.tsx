@@ -52,6 +52,7 @@ export function TransferForm({ store, existing, onClose }: Props) {
       amount: cents,
       date,
       note: note.trim(),
+      createdAt: existing ? existing.createdAt : new Date().toISOString(),
     };
     update((prev) => ({
       ...prev,

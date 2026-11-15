@@ -284,6 +284,21 @@ tbody tr { transition: background .14s ease; }
 tbody tr:hover { background: #f8faf3; }
 tbody tr:last-child td { border-bottom: none; }
 
+/* The money left in each account right after an entry. */
+.bal-cell { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bal-cell > span { display: inline-block; margin-right: 10px; white-space: nowrap; }
+.bal-cell > span:last-child { margin-right: 0; }
+.bal-cell strong { color: var(--text); font-weight: 600; }
+
+/* Settled loans and favors fold away so what is still outstanding reads first. */
+.settled-block { margin-top: 22px; }
+.settled-block > summary {
+  cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted);
+  padding: 8px 2px; list-style-position: inside;
+}
+.settled-block > summary:hover { color: var(--text); }
+.settled-block .grid { margin-top: 14px; }
+
 /* ---------- Forms ---------- */
 input, select, textarea {
   width: 100%; padding: 11px 13px; border-radius: 14px; border: 1px solid var(--border);
@@ -617,7 +632,8 @@ label {
   .tx-table td:nth-child(3) { font-size: 12px; color: var(--muted); }
   .tx-table td:nth-child(4) { grid-column: 1 / -1; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
   .tx-table td:nth-child(5) { grid-row: 2 / 4; grid-column: 2; text-align: right; font-weight: 600; font-size: 16px; align-self: center; }
-  .tx-table td:nth-child(6) { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  .tx-table td:nth-child(6) { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12px; color: var(--muted); }
+  .tx-table td:nth-child(7) { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 }
 
 @media (max-width: 380px) {

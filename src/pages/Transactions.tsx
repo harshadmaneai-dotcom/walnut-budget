@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Store } from '../store';
-import type { Transaction, Transfer, TxType } from '../lib/types';
+import type { Loan, Repayment, Transaction, Transfer, TxType } from '../lib/types';
 import { formatDate, formatMoney } from '../lib/format';
 import { TransactionForm } from '../components/TransactionForm';
 import { TransferForm } from '../components/TransferForm';
@@ -8,14 +8,16 @@ import { Select } from '../components/Select';
 import { DatePicker } from '../components/DatePicker';
 import { confirmDialog } from '../components/confirm';
 import { categoryGroup, groupLabel } from '../lib/groups';
+import { balanceKey, balancesAfterEntries } from '../lib/calc';
 import { Icon } from '../components/Icon';
 
 type SortKey = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
-type TypeFilter = 'all' | TxType | 'transfer';
+type TypeFilter = 'all' | TxType | 'transfer' | 'repayment';
 
 type LedgerEntry =
   | { kind: 'transaction'; tx: Transaction }
-  | { kind: 'transfer'; transfer: Transfer };
+  | { kind: 'transfer'; transfer: Transfer }
+  | { kind: 'repayment'; loan: Loan; repayment: Repayment };
 
 export function Transactions({ store }: { store: Store }) {
   const { data, update } = store;
@@ -29,6 +31,10 @@ export function Transactions({ store }: { store: Store }) {
   const [editing, setEditing] = useState<Transaction | 'new' | null>(null);
   const [editingTransfer, setEditingTransfer] = useState<Transfer | 'new' | null>(null);
 
+  // Running balances come from the data, not the current sort, so every row shows what that
+  // account really held right after the entry.
+  const balancesAfter = useMemo(() => balancesAfterEntries(data), [data]);
+
   const catName = (id: string) => data.categories.find((c) => c.id === id)?.name ?? '';
   const accName = (id: string | null) => data.accounts.find((a) => a.id === id)?.name ?? '—';
 
@@ -36,7 +42,7 @@ export function Transactions({ store }: { store: Store }) {
     const q = search.trim().toLowerCase();
     const entries: LedgerEntry[] = [];
 
-    if (type !== 'transfer') {
+    if (type !== 'transfer' && type !== 'repayment') {
       for (const t of data.transactions) {
         if (type !== 'all' && t.type !== type) continue;
         if (categoryId !== 'all' && t.categoryId !== categoryId) continue;
@@ -64,10 +70,35 @@ export function Transactions({ store }: { store: Store }) {
       }
     }
 
+    // Repayments are edited on the Loans page, but they belong in the ledger because they
+    // move account balances. A category filter excludes them, like it excludes transfers.
+    if ((type === 'all' || type === 'repayment') && categoryId === 'all') {
+      for (const loan of data.loans) {
+        for (const repayment of loan.repayments) {
+          if (from && repayment.date < from) continue;
+          if (to && repayment.date > to) continue;
+          if (q) {
+            const haystack =
+              `loan repayment ${loan.counterparty} ${repayment.note} ${accName(repayment.accountId)}`.toLowerCase();
+            if (!haystack.includes(q)) continue;
+          }
+          entries.push({ kind: 'repayment', loan, repayment });
+        }
+      }
+    }
+
     const dateOf = (entry: LedgerEntry) =>
-      entry.kind === 'transaction' ? entry.tx.date : entry.transfer.date;
+      entry.kind === 'transaction'
+        ? entry.tx.date
+        : entry.kind === 'transfer'
+          ? entry.transfer.date
+          : entry.repayment.date;
     const amountOf = (entry: LedgerEntry) =>
-      entry.kind === 'transaction' ? entry.tx.amount : entry.transfer.amount;
+      entry.kind === 'transaction'
+        ? entry.tx.amount
+        : entry.kind === 'transfer'
+          ? entry.transfer.amount
+          : entry.repayment.amount;
 
     const cmp: Record<SortKey, (a: LedgerEntry, b: LedgerEntry) => number> = {
       'date-desc': (a, b) => dateOf(b).localeCompare(dateOf(a)),
@@ -101,6 +132,27 @@ export function Transactions({ store }: { store: Store }) {
     update((prev) => ({ ...prev, transfers: prev.transfers.filter((t) => t.id !== id) }));
   }
 
+  /** The money left in each account right after this entry; accounts at zero stay hidden. */
+  function balanceAfter(entry: LedgerEntry) {
+    const key =
+      entry.kind === 'transaction'
+        ? balanceKey('tx', entry.tx.id)
+        : entry.kind === 'transfer'
+          ? balanceKey('transfer', entry.transfer.id)
+          : balanceKey('repayment', entry.loan.id, entry.repayment.id);
+    const accounts = balancesAfter.get(key) ?? [];
+    if (accounts.length === 0) return <td className="bal-cell" />;
+    return (
+      <td className="bal-cell">
+        {accounts.map((account) => (
+          <span key={account.accountId}>
+            {account.name} <strong>{formatMoney(account.balance, cur)}</strong>
+          </span>
+        ))}
+      </td>
+    );
+  }
+
   return (
     <>
       <div className="topbar">
@@ -129,10 +181,11 @@ export function Transactions({ store }: { store: Store }) {
               { value: 'expense', label: 'Expenses' },
               { value: 'income', label: 'Income' },
               { value: 'transfer', label: 'Transfers' },
+              { value: 'repayment', label: 'Loan repayments' },
             ]}
             onChange={(v) => {
               setType(v as TypeFilter);
-              if (v === 'transfer') setCategoryId('all');
+              if (v === 'transfer' || v === 'repayment') setCategoryId('all');
             }}
           />
           <Select
@@ -172,11 +225,31 @@ export function Transactions({ store }: { store: Store }) {
             <table className="tx-table">
               <thead>
                 <tr>
-                  <th>Date</th><th>Category</th><th>Account</th><th>Note</th><th className="num">Amount</th><th />
+                  <th>Date</th><th>Category</th><th>Account</th><th>Note</th><th className="num">Amount</th><th className="num">Balance after</th><th />
                 </tr>
               </thead>
               <tbody>
                 {rows.map((entry) => {
+                  if (entry.kind === 'repayment') {
+                    const r = entry.repayment;
+                    const moneyOut = entry.loan.direction === 'borrowed';
+                    return (
+                      <tr key={`repayment-${entry.loan.id}-${r.id}`}>
+                        <td>{formatDate(r.date)}</td>
+                        <td>Loan repayment</td>
+                        <td>{entry.loan.counterparty}</td>
+                        <td className="muted">{r.note}</td>
+                        <td className={`num ${moneyOut ? 'neg' : 'pos'}`}>
+                          {moneyOut ? '−' : '+'}{formatMoney(r.amount, cur)}
+                        </td>
+                        {balanceAfter(entry)}
+                        <td style={{ textAlign: 'right' }}>
+                          <a className="btn small" href="#loans">Open loan</a>
+                        </td>
+                      </tr>
+                    );
+                  }
+
                   if (entry.kind === 'transfer') {
                     const t = entry.transfer;
                     return (
@@ -186,6 +259,7 @@ export function Transactions({ store }: { store: Store }) {
                         <td>{accName(t.fromAccountId)} → {accName(t.toAccountId)}</td>
                         <td className="muted">{t.note}</td>
                         <td className="num muted">{formatMoney(t.amount, cur)}</td>
+                        {balanceAfter(entry)}
                         <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                             <button className="icon-btn" aria-label="Edit transfer" onClick={() => setEditingTransfer(t)}>
@@ -210,6 +284,7 @@ export function Transactions({ store }: { store: Store }) {
                       <td className={`num ${t.type === 'income' ? 'pos' : 'neg'}`}>
                         {t.type === 'income' ? '+' : '−'}{formatMoney(t.amount, cur)}
                       </td>
+                      {balanceAfter(entry)}
                       <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                           <button className="icon-btn" aria-label="Edit transaction" onClick={() => setEditing(t)}>

@@ -58,6 +58,7 @@ export function TransactionForm({ store, existing, defaultType = 'expense', onCl
       accountId: accountId || null,
       note: note.trim(),
       recurringId: existing?.recurringId,
+      createdAt: existing ? existing.createdAt : new Date().toISOString(),
     };
     update((prev) => ({
       ...prev,

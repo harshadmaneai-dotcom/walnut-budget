@@ -116,6 +116,23 @@ function BudgetApp({ userId }: { userId: string }) {
           <button className="btn small" onClick={store.retrySync}>Retry</button>
         </div>
       )}
+      {store.recoveryNotice && (
+        <div className="sync-banner recovery" role="status" aria-live="polite">
+          <span className="sync-dot recovery" aria-hidden="true" />
+          <div className="sync-text">
+            <strong>Local backup kept</strong>
+            <span>{store.recoveryNotice}</span>
+          </div>
+          <a className="btn small" href="#settings">Review</a>
+          <button
+            className="update-dismiss"
+            aria-label="Dismiss recovery notice"
+            onClick={store.dismissRecovery}
+          >
+            ×
+          </button>
+        </div>
+      )}
       <Tour userId={userId} />
       <ConfirmHost />
     </div>

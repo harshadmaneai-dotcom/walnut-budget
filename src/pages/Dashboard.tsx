@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Store } from '../store';
-import type { Transaction, Transfer } from '../lib/types';
+import { buildActivity } from '../lib/activity';
 import { accountBalance, lastMonths, loanStatus, loanTotals, monthTotals, totalBalance, remainingAmount } from '../lib/calc';
 import { formatDate, formatMoney, monthLabel, todayISO } from '../lib/format';
 import { TransactionForm } from '../components/TransactionForm';
@@ -8,10 +8,6 @@ import { TransferForm } from '../components/TransferForm';
 import { GroupDonut } from '../components/GroupDonut';
 import { Icon } from '../components/Icon';
 import { GROUPS, categoryGroup, groupSpend, groupTotal } from '../lib/groups';
-
-type RecentEntry =
-  | { kind: 'transaction'; tx: Transaction }
-  | { kind: 'transfer'; transfer: Transfer };
 
 export function Dashboard({ store }: { store: Store }) {
   const { data } = store;
@@ -51,16 +47,10 @@ export function Dashboard({ store }: { store: Store }) {
   const accountName = (id: string) =>
     data.accounts.find((a) => a.id === id)?.name ?? 'Deleted account';
 
-  const recent: RecentEntry[] = [
-    ...data.transfers.map((transfer) => ({ kind: 'transfer' as const, transfer })),
-    ...data.transactions.map((tx) => ({ kind: 'transaction' as const, tx })),
-  ]
-    .sort((a, b) => {
-      const left = a.kind === 'transfer' ? a.transfer.date : a.tx.date;
-      const right = b.kind === 'transfer' ? b.transfer.date : b.tx.date;
-      return left < right ? 1 : left > right ? -1 : 0;
-    })
-    .slice(0, 6);
+  // The dashboard is a preview, not the ledger: show ten and state the total so a busy day
+  // never looks like missing data. The Activity page has every entry.
+  const activity = buildActivity(data, 10);
+  const recent = activity.entries;
 
   const net = totals.income - totals.expense;
   const spentShare = totals.income > 0 ? Math.min(100, (totals.expense / totals.income) * 100) : 0;
@@ -240,9 +230,33 @@ export function Dashboard({ store }: { store: Store }) {
         </section>
 
         <section className="card col-6">
-          <div className="card-head"><div><h2>Recent activity</h2><p>Transactions and transfers</p></div></div>
+          <div className="card-head">
+            <div><h2>Recent activity</h2><p>Transactions, transfers and loan repayments</p></div>
+            <a className="card-link" href="#transactions">View all</a>
+          </div>
           {recent.length === 0 && <div className="empty">No transactions yet. Add your first one above.</div>}
           {recent.map((entry) => {
+            if (entry.kind === 'repayment') {
+              const r = entry.repayment;
+              const moneyOut = entry.loan.direction === 'borrowed';
+              const title = `${entry.loan.counterparty}${r.note ? ` · ${r.note}` : ''}`;
+              return (
+                <div className="list-row" key={`repayment-${entry.loan.id}-${r.id}`}>
+                  <div className="activity-main">
+                    <div className="dot-icon g-transfer">
+                      <Icon name="users" size={17} />
+                    </div>
+                    <div className="row-text">
+                      <div className="row-title" title={`Loan repayment · ${title}`}>Loan repayment · {title}</div>
+                      <div className="meta">{formatDate(r.date)}</div>
+                    </div>
+                  </div>
+                  <div className={`row-amount ${moneyOut ? 'neg' : 'pos'}`}>
+                    {moneyOut ? '−' : '+'}{formatMoney(r.amount, cur)}
+                  </div>
+                </div>
+              );
+            }
             if (entry.kind === 'transfer') {
               const tr = entry.transfer;
               const from = accountName(tr.fromAccountId);
@@ -284,6 +298,11 @@ export function Dashboard({ store }: { store: Store }) {
               </div>
             );
           })}
+          {activity.total > 0 && (
+            <p className="muted small" style={{ margin: '12px 0 0' }}>
+              Showing {recent.length} of {activity.total} {activity.total === 1 ? 'entry' : 'entries'}.
+            </p>
+          )}
         </section>
       </div>
 

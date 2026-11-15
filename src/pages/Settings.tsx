@@ -1,6 +1,13 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Store } from '../store';
-import { defaultData, parseData } from '../lib/storage';
+import {
+  defaultData,
+  listSnapshots,
+  loadSnapshot,
+  parseData,
+  saveSnapshot,
+  type SnapshotInfo,
+} from '../lib/storage';
 import { downloadFile } from '../lib/csv';
 import { todayISO } from '../lib/format';
 import { CategoriesPanel } from '../components/CategoriesPanel';
@@ -23,6 +30,7 @@ export function Settings({ store }: { store: Store }) {
   const [signOutError, setSignOutError] = useState('');
   const [signingOut, setSigningOut] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>(getThemeChoice);
+  const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([]);
 
   const email = user?.email ?? '';
   const initial = email ? email[0].toUpperCase() : 'W';
@@ -30,8 +38,29 @@ export function Settings({ store }: { store: Store }) {
     ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : null;
 
+  useEffect(() => {
+    setSnapshots(listSnapshots(user?.id ?? ''));
+  }, [user?.id]);
+
   function exportBackup() {
     downloadFile(`walnut-backup-${todayISO()}.json`, JSON.stringify(data, null, 2), 'application/json');
+  }
+
+  async function restoreSnapshot(snapshot: SnapshotInfo) {
+    const restored = loadSnapshot(user?.id ?? '', snapshot.id);
+    if (!restored) return;
+    const ok = await confirmDialog({
+      title: 'Restore this local copy?',
+      message: `This replaces the current budget with the copy from ${new Date(snapshot.at).toLocaleString()}. A backup of the current copy is kept first.`,
+      confirmLabel: 'Restore',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    // Keep the copy being replaced too, so restoring is itself reversible. The selected
+    // snapshot was already read into memory, so pruning the oldest one is safe here.
+    if (user?.id) saveSnapshot(user.id, data);
+    replaceAll(restored);
+    setSnapshots(listSnapshots(user?.id ?? ''));
   }
 
   async function importBackup(file: File) {
@@ -170,6 +199,35 @@ export function Settings({ store }: { store: Store }) {
             />
           </div>
           {importError && <p className="error" style={{ marginTop: 12 }}>{importError}</p>}
+        </section>
+
+        <section className="card col-6">
+          <div className="card-head">
+            <div><h2>Recovery</h2><p>Local copies kept before a cloud update</p></div>
+          </div>
+          {snapshots.length === 0 ? (
+            <p className="muted small" style={{ margin: 0 }}>
+              No local copies yet. Walnut keeps the last five automatically before replacing this
+              device&apos;s data with a cloud copy.
+            </p>
+          ) : (
+            <div className="snapshot-list">
+              {snapshots.map((snapshot) => (
+                <div className="snapshot-row" key={snapshot.id}>
+                  <div className="snapshot-text">
+                    <strong>{new Date(snapshot.at).toLocaleString()}</strong>
+                    <span>
+                      {snapshot.transactions} transactions · {snapshot.transfers} transfers ·{' '}
+                      {snapshot.loans} loans
+                    </span>
+                  </div>
+                  <button className="btn small" onClick={() => void restoreSnapshot(snapshot)}>
+                    Restore
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <UpdatePanel />

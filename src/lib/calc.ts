@@ -1,4 +1,5 @@
-import type { AppData, Loan, RecurringRule, Transaction } from './types';
+import { buildActivity } from './activity';
+import type { Account, AppData, Favor, Loan, RecurringRule, Transaction } from './types';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -36,6 +37,24 @@ export function loanTotals(loans: Loan[]): LoanTotals {
   return { owe, owed, net: owed - owe };
 }
 
+export interface FavorTotals {
+  theyCovered: number; // owed back to friends who paid for me
+  iCovered: number; // friends still owe me
+  net: number; // theyCovered - iCovered
+}
+
+/** Running totals of favors nobody has settled yet. */
+export function favorTotals(favors: Favor[]): FavorTotals {
+  let theyCovered = 0;
+  let iCovered = 0;
+  for (const favor of favors) {
+    if (favor.settled) continue;
+    if (favor.direction === 'theyCovered') theyCovered += favor.amount;
+    else iCovered += favor.amount;
+  }
+  return { theyCovered, iCovered, net: theyCovered - iCovered };
+}
+
 /** Balance of one account: opening balance plus its transactions and loan cash movements. */
 export function accountBalance(data: AppData, accountId: string): number {
   const account = data.accounts.find((a) => a.id === accountId);
@@ -61,6 +80,81 @@ export function accountBalance(data: AppData, accountId: string): number {
 
 export function totalBalance(data: AppData): number {
   return data.accounts.reduce((sum, a) => sum + accountBalance(data, a.id), 0);
+}
+
+/** Key for one activity entry in the map returned by balancesAfterEntries(). */
+export function balanceKey(kind: 'tx' | 'transfer' | 'repayment', ...ids: string[]): string {
+  return `${kind}:${ids.join(':')}`;
+}
+
+/** An account and what it held right after one activity entry. */
+export interface BalanceAfter {
+  accountId: string;
+  name: string;
+  balance: number;
+}
+
+/** Every account still holding money, with its running balance. Zeros are left out. */
+function snapshotBalances(accounts: Account[], balances: Map<string, number>): BalanceAfter[] {
+  const out: BalanceAfter[] = [];
+  for (const account of accounts) {
+    const balance = balances.get(account.id) ?? 0;
+    if (balance === 0) continue;
+    out.push({ accountId: account.id, name: account.name, balance });
+  }
+  return out;
+}
+
+/**
+ * Running balance of every account after each activity entry, oldest first. The replay uses
+ * the same rules as accountBalance(), so a row shows what that account really held at that
+ * point in time rather than what the current sort order would suggest. The chronological
+ * order is activity.ts's own, reversed, so a row's figure always matches the feed's order
+ * even for legacy records that share a date.
+ */
+export function balancesAfterEntries(data: AppData): Map<string, BalanceAfter[]> {
+  const balances = new Map<string, number>();
+  for (const account of data.accounts) balances.set(account.id, account.openingBalance);
+
+  // Every entry, not the dashboard's preview, so each row gets its own figure.
+  const { entries } = buildActivity(data, Number.MAX_SAFE_INTEGER);
+  const result = new Map<string, BalanceAfter[]>();
+
+  for (let i = entries.length - 1; i >= 0; i -= 1) {
+    const entry = entries[i];
+    if (entry.kind === 'transaction') {
+      const accountId = entry.tx.accountId;
+      const current = accountId === null ? undefined : balances.get(accountId);
+      if (accountId !== null && current !== undefined) {
+        balances.set(accountId, current + (entry.tx.type === 'income' ? entry.tx.amount : -entry.tx.amount));
+      }
+      result.set(balanceKey('tx', entry.tx.id), snapshotBalances(data.accounts, balances));
+      continue;
+    }
+
+    if (entry.kind === 'transfer') {
+      const { fromAccountId, toAccountId, amount } = entry.transfer;
+      const from = balances.get(fromAccountId);
+      if (from !== undefined) balances.set(fromAccountId, from - amount);
+      const to = balances.get(toAccountId);
+      if (to !== undefined) balances.set(toAccountId, to + amount);
+      result.set(balanceKey('transfer', entry.transfer.id), snapshotBalances(data.accounts, balances));
+      continue;
+    }
+
+    const accountId = entry.repayment.accountId;
+    const current = accountId === null ? undefined : balances.get(accountId);
+    if (accountId !== null && current !== undefined) {
+      // Repaying a borrowed loan moves money out; collecting a lent loan moves money in.
+      balances.set(accountId, current + (entry.loan.direction === 'borrowed' ? -entry.repayment.amount : entry.repayment.amount));
+    }
+    result.set(
+      balanceKey('repayment', entry.loan.id, entry.repayment.id),
+      snapshotBalances(data.accounts, balances),
+    );
+  }
+
+  return result;
 }
 
 export function monthKey(date: string): string {

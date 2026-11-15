@@ -10,7 +10,9 @@ import {
   newId,
   normalizeData,
   saveData,
+  saveSnapshot,
 } from './lib/storage';
+import { missingEntryCount } from './lib/recovery';
 import type { AppData } from './lib/types';
 import { todayISO } from './lib/format';
 import { fetchRemote, fetchRemoteTimestamp, remoteEnabled, saveRemote } from './lib/remote';
@@ -47,10 +49,29 @@ export function useStore(userId: string) {
     remoteEnabled ? 'syncing' : 'local',
   );
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [recoveryNotice, setRecoveryNotice] = useState<string | null>(null);
   const [ready, setReady] = useState(!remoteEnabled);
   const lastError = useRef<string | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
+
+  /**
+   * A remote document may be older or incomplete (an offline device saved last). Before it
+   * replaces this device's copy, keep a local snapshot if it would drop any record. The
+   * snapshot is the recovery path; the cloud copy is still applied so sync can continue.
+   */
+  const preserveBeforeRemote = useCallback(
+    (next: AppData) => {
+      const missing = missingEntryCount(dataRef.current, next);
+      if (missing === 0) return;
+      const snapshot = saveSnapshot(userId, dataRef.current);
+      if (!snapshot) return;
+      setRecoveryNotice(
+        `A cloud update would have removed ${missing} ${missing === 1 ? 'entry' : 'entries'}. A local backup was kept.`,
+      );
+    },
+    [userId],
+  );
 
   /** Serialises cloud writes, so an older document can never land after a newer one. */
   const writeChain = useRef<Promise<unknown>>(Promise.resolve());
@@ -89,7 +110,9 @@ export function useStore(userId: string) {
           // A cache holding unsynced edits wins over the cloud copy; otherwise the cloud is
           // authoritative. This is what stops a reload mid-write from losing an edit.
           if (!dirty) {
-            setData(withDueRecurring(normalizeData(remote.data)));
+            const next = withDueRecurring(normalizeData(remote.data));
+            preserveBeforeRemote(next);
+            setData(next);
           }
         } else if (initial.legacy && isBlankData(initial.data)) {
           // First sign-in on this device: the old single-user budget becomes this account's.
@@ -112,7 +135,7 @@ export function useStore(userId: string) {
     return () => {
       cancelled = true;
     };
-  }, [userId, initial.legacy, initial.data, reportError]);
+  }, [userId, initial.legacy, initial.data, reportError, preserveBeforeRemote]);
 
   useEffect(() => {
     // The local cache is written immediately, so nothing is lost if the app closes now.
@@ -182,6 +205,7 @@ export function useStore(userId: string) {
       const next = withDueRecurring(normalizeData(remote.data));
       if (JSON.stringify(next) === JSON.stringify(dataRef.current)) return;
 
+      preserveBeforeRemote(next);
       remoteApplied.current = next;
       setData(next);
     } catch {
@@ -189,7 +213,7 @@ export function useStore(userId: string) {
     } finally {
       refreshingRemote.current = false;
     }
-  }, [ready, userId]);
+  }, [ready, userId, preserveBeforeRemote]);
 
   useEffect(() => {
     if (!remoteEnabled || !ready) return;
@@ -240,8 +264,9 @@ export function useStore(userId: string) {
 
   const update = useCallback((fn: (prev: AppData) => AppData) => setData((prev) => fn(prev)), []);
   const replaceAll = useCallback((next: AppData) => setData(next), []);
+  const dismissRecovery = useCallback(() => setRecoveryNotice(null), []);
 
-  return { data, update, replaceAll, syncStatus, syncError, retrySync };
+  return { data, update, replaceAll, syncStatus, syncError, recoveryNotice, dismissRecovery, retrySync };
 }
 
 export type Store = ReturnType<typeof useStore>;

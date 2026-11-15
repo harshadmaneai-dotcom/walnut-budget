@@ -20,6 +20,7 @@ function sample(): AppData {
       { id: 't3', type: 'expense', amount: 300_00, date: '2026-01-04', categoryId: 'dining', accountId: null, note: '' },
     ],
     loans: [],
+    favors: [],
     recurring: [
       {
         id: 'r1',

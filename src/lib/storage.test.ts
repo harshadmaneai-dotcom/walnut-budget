@@ -131,6 +131,29 @@ describe('parseData', () => {
   });
 });
 
+describe('favors', () => {
+  it('fills in an empty list for documents saved before favors existed', () => {
+    const data = normalizeData({ ...defaultData(), favors: undefined } as never);
+    expect(data.favors).toEqual([]);
+  });
+
+  it('keeps usable favors and drops the ones it cannot place', () => {
+    const data = normalizeData({
+      ...defaultData(),
+      favors: [
+        { id: 'f1', person: 'Sam', amount: 25_00, date: '2026-11-01', note: 'Dinner', direction: 'theyCovered', settled: false },
+        { id: 'no-date', person: 'Sam', amount: 10_00, date: 'yesterday', direction: 'iCovered', settled: false },
+        { person: 'No id', amount: 5_00, date: '2026-11-02', direction: 'iCovered' },
+        { id: 'f2', person: 'Riya', amount: '12.50', date: '2026-11-03', note: '', direction: 'iCovered', settled: 'yes' },
+      ],
+    } as never);
+
+    expect(data.favors.map((f) => f.id)).toEqual(['f1', 'f2']);
+    // A stray string amount becomes 0 rather than poisoning the totals, and "yes" is not settled.
+    expect(data.favors[1]).toMatchObject({ amount: 0, settled: false, direction: 'iCovered' });
+  });
+});
+
 describe('isIsoDate', () => {
   it('accepts real calendar dates only', () => {
     expect(isIsoDate('2024-02-29')).toBe(true);

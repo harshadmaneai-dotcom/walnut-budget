@@ -3,6 +3,7 @@ import type {
   AppData,
   Category,
   CategoryGroup,
+  Favor,
   Loan,
   RecurringRule,
   Repayment,
@@ -17,7 +18,7 @@ export const STORAGE_PREFIX = 'walnut:data';
 export const LEGACY_STORAGE_KEY = 'budget-tracker:data';
 export const LEGACY_CLAIM_KEY = 'walnut:legacy-claimed';
 
-export const DATA_VERSION = 3;
+export const DATA_VERSION = 4;
 export const INVESTMENT_CATEGORY_ID = 'c-invest';
 
 export const DEFAULT_CATEGORIES: Category[] = [
@@ -45,6 +46,7 @@ export function defaultData(): AppData {
     transactions: [],
     transfers: [],
     loans: [],
+    favors: [],
     recurring: [],
   };
 }
@@ -96,6 +98,12 @@ function asOptionalId(value: unknown): string | null {
   return typeof value === 'string' && value ? value : null;
 }
 
+/** Keep a valid ISO timestamp; an old or hand-edited document simply has no creation time. */
+function asTimestamp(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !value) return undefined;
+  return Number.isFinite(Date.parse(value)) ? value : undefined;
+}
+
 const ACCOUNT_KINDS: Account['kind'][] = ['cash', 'bank', 'card', 'other'];
 const CATEGORY_GROUPS: CategoryGroup[] = ['need', 'want', 'investment'];
 
@@ -144,6 +152,7 @@ function normalizeTransactions(value: unknown): Transaction[] {
   for (const entry of asArray(value)) {
     const record = asRecord(entry);
     if (!record || typeof record.id !== 'string' || !record.id) continue;
+    const createdAt = asTimestamp(record.createdAt);
     transactions.push({
       id: record.id,
       type: record.type === 'income' ? 'income' : 'expense',
@@ -153,6 +162,7 @@ function normalizeTransactions(value: unknown): Transaction[] {
       accountId: asOptionalId(record.accountId),
       note: asText(record.note),
       recurringId: asText(record.recurringId) || undefined,
+      ...(createdAt ? { createdAt } : {}),
     });
   }
   return transactions;
@@ -167,6 +177,7 @@ function normalizeTransfers(value: unknown): Transfer[] {
     const toAccountId = asOptionalId(record.toAccountId);
     // A transfer needs both ends and they must be different accounts.
     if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) continue;
+    const createdAt = asTimestamp(record.createdAt);
     transfers.push({
       id: record.id,
       fromAccountId,
@@ -174,6 +185,7 @@ function normalizeTransfers(value: unknown): Transfer[] {
       amount: asCents(record.amount),
       date: asText(record.date),
       note: asText(record.note),
+      ...(createdAt ? { createdAt } : {}),
     });
   }
   return transfers;
@@ -213,6 +225,26 @@ function normalizeLoans(value: unknown): Loan[] {
     });
   }
   return loans;
+}
+
+function normalizeFavors(value: unknown): Favor[] {
+  const favors: Favor[] = [];
+  for (const entry of asArray(value)) {
+    const record = asRecord(entry);
+    if (!record || typeof record.id !== 'string' || !record.id) continue;
+    // A favor without a real date cannot take its place in the list, so it is dropped.
+    if (!isIsoDate(record.date)) continue;
+    favors.push({
+      id: record.id,
+      person: asText(record.person, 'Someone'),
+      amount: Math.max(0, asCents(record.amount)),
+      date: record.date,
+      note: asText(record.note),
+      direction: record.direction === 'iCovered' ? 'iCovered' : 'theyCovered',
+      settled: record.settled === true,
+    });
+  }
+  return favors;
 }
 
 function normalizeRecurring(value: unknown): RecurringRule[] {
@@ -281,6 +313,7 @@ export function normalizeData(data: AppData): AppData {
     transactions: normalizeTransactions(source.transactions),
     transfers: normalizeTransfers(source.transfers),
     loans: normalizeLoans(source.loans),
+    favors: normalizeFavors(source.favors),
     recurring: normalizeRecurring(source.recurring),
   };
 }
@@ -310,6 +343,7 @@ export function isBlankData(data: AppData): boolean {
     data.transactions.length === 0 &&
     data.transfers.length === 0 &&
     data.loans.length === 0 &&
+    data.favors.length === 0 &&
     data.recurring.length === 0 &&
     data.accounts.every((a) => a.openingBalance === 0)
   );
@@ -372,6 +406,129 @@ export function clearDirty(userId: string): void {
 export function clearCached(userId: string): void {
   localStorage.removeItem(keyFor(userId));
   localStorage.removeItem(dirtyKeyFor(userId));
+  clearSnapshots(userId);
+}
+
+/** A rollback copy kept only on this device. */
+export interface SnapshotInfo {
+  id: string;
+  at: string;
+  transactions: number;
+  transfers: number;
+  loans: number;
+  recurring: number;
+}
+
+const SNAPSHOT_PREFIX = 'walnut:snapshot';
+export const SNAPSHOT_LIMIT = 5;
+
+function snapshotPrefix(userId: string): string {
+  return `${SNAPSHOT_PREFIX}:${userId}:`;
+}
+
+function snapshotKey(userId: string, id: string): string {
+  return `${snapshotPrefix(userId)}${id}`;
+}
+
+function snapshotKeys(userId: string): string[] {
+  const prefix = snapshotPrefix(userId);
+  const keys: string[] = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(prefix)) keys.push(key);
+  }
+  return keys;
+}
+
+function infoFor(id: string, at: string, data: AppData): SnapshotInfo {
+  return {
+    id,
+    at,
+    transactions: data.transactions.length,
+    transfers: data.transfers.length,
+    loans: data.loans.length,
+    recurring: data.recurring.length,
+  };
+}
+
+/**
+ * Keep a small rolling history of this device's copy before a remote document replaces it.
+ * localStorage can be full or blocked, so a failed snapshot must never stop the sync path.
+ */
+export function saveSnapshot(userId: string, data: AppData): SnapshotInfo | null {
+  if (!userId) return null;
+  const at = new Date().toISOString();
+  const id = newId();
+  const info = infoFor(id, at, data);
+
+  // Make room before writing, otherwise a full quota would reject the new snapshot.
+  const existing = listSnapshots(userId);
+  for (const old of existing.slice(SNAPSHOT_LIMIT - 1)) {
+    try {
+      localStorage.removeItem(snapshotKey(userId, old.id));
+    } catch {
+      // A failed prune is not fatal; the write below may still fit.
+    }
+  }
+
+  try {
+    localStorage.setItem(snapshotKey(userId, id), JSON.stringify({ info, data }));
+    return info;
+  } catch {
+    return null;
+  }
+}
+
+/** Newest first. Invalid or partial entries are ignored rather than breaking Settings. */
+export function listSnapshots(userId: string): SnapshotInfo[] {
+  if (!userId) return [];
+  const snapshots: SnapshotInfo[] = [];
+  for (const key of snapshotKeys(userId)) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw) as { info?: Partial<SnapshotInfo>; data?: unknown };
+      const info = parsed.info;
+      if (!info || typeof info.id !== 'string' || typeof info.at !== 'string') continue;
+      if (!Number.isFinite(Date.parse(info.at))) continue;
+      if (!parsed.data || typeof parsed.data !== 'object') continue;
+      snapshots.push({
+        id: info.id,
+        at: info.at,
+        transactions: typeof info.transactions === 'number' ? info.transactions : 0,
+        transfers: typeof info.transfers === 'number' ? info.transfers : 0,
+        loans: typeof info.loans === 'number' ? info.loans : 0,
+        recurring: typeof info.recurring === 'number' ? info.recurring : 0,
+      });
+    } catch {
+      // Ignore a damaged snapshot; it must not prevent the others from being listed.
+    }
+  }
+  return snapshots.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+}
+
+export function loadSnapshot(userId: string, id: string): AppData | null {
+  if (!userId || !id) return null;
+  try {
+    const raw = localStorage.getItem(snapshotKey(userId, id));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { data?: unknown };
+    if (!parsed.data || typeof parsed.data !== 'object') return null;
+    return normalizeData(parsed.data as AppData);
+  } catch {
+    return null;
+  }
+}
+
+export function clearSnapshots(userId: string): void {
+  if (!userId) return;
+  for (const key of snapshotKeys(userId)) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Best effort: sign-out still works even if storage is read-only.
+    }
+  }
 }
 
 export function newId(): string {

@@ -31,6 +31,8 @@ export interface Transaction {
   accountId: string | null;
   note: string;
   recurringId?: string;
+  /** When the record was added. Optional on documents saved before activity ordering used it. */
+  createdAt?: string;
 }
 
 export interface Transfer {
@@ -40,6 +42,8 @@ export interface Transfer {
   amount: number;
   date: string; // YYYY-MM-DD
   note: string;
+  /** When the record was added. Optional on documents saved before activity ordering used it. */
+  createdAt?: string;
 }
 
 export interface Repayment {
@@ -60,6 +64,23 @@ export interface Loan {
   note: string;
   accountId: string | null;
   repayments: Repayment[];
+}
+
+/** Who spent the money on a favor: a friend covered my bill, or I covered theirs. */
+export type FavorDirection = 'theyCovered' | 'iCovered';
+
+/**
+ * An informal debt, like a friend paying for dinner. Favors are tracked only: no cash left or
+ * entered an account, so they never change an account balance or appear in the ledger.
+ */
+export interface Favor {
+  id: string;
+  person: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  note: string;
+  direction: FavorDirection;
+  settled: boolean;
 }
 
 export interface RecurringRule {
@@ -87,5 +108,6 @@ export interface AppData {
   transactions: Transaction[];
   transfers: Transfer[];
   loans: Loan[];
+  favors: Favor[];
   recurring: RecurringRule[];
 }
