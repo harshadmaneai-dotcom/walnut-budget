@@ -45,14 +45,16 @@ describe('missingEntryCount', () => {
     expect(missingEntryCount(local, remote)).toBe(1);
   });
 
-  it('counts a dropped favor', () => {
+  it('counts a dropped favor and a dropped person', () => {
     const withFavor: AppData = {
       ...local,
+      favorPeople: [{ id: 'p-sam', name: 'Sam' }],
       favors: [
-        { id: 'f1', person: 'Sam', amount: 500, date: '2026-11-05', note: '', direction: 'theyCovered', settled: false },
+        { id: 'f1', personId: 'p-sam', amount: 500, date: '2026-11-05', note: '', direction: 'theyCovered' },
       ],
     };
     expect(missingEntryCount(withFavor, withFavor)).toBe(0);
-    expect(missingEntryCount(withFavor, local)).toBe(1);
+    // The person and the entry that depends on them are both gone.
+    expect(missingEntryCount(withFavor, local)).toBe(2);
   });
 });

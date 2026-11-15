@@ -1,10 +1,14 @@
-import { ANDROID_DOWNLOAD_URL, REPO } from './downloads';
+import { ANDROID_DOWNLOAD_URL, REPO, WEB_ORIGIN } from './downloads';
 import { APP_VERSION, compareVersions } from './version';
 
 /**
  * The Android updater reads GitHub's latest release, which is the same release the desktop
  * updater reads. One publish therefore feeds both platforms, and no hand-maintained version
  * file can fall behind.
+ *
+ * The APK itself is also mirrored beside the website, because GitHub's release storage is
+ * painfully slow on some networks. The mirror is tried first and GitHub is kept as the
+ * fallback, so a missing or stale mirror can never block an update.
  */
 const LATEST_RELEASE_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
 
@@ -14,7 +18,8 @@ const CACHE_MS = 60 * 60 * 1000;
 
 export interface AvailableUpdate {
   version: string;
-  apkUrl: string;
+  /** Download sources, best first: website mirror, then the release asset, then GitHub's stable link. */
+  urls: string[];
   /** Published size in bytes, used to skip a download that already finished. 0 when unknown. */
   bytes: number;
   notes: string;
@@ -36,10 +41,14 @@ interface ReleaseAsset {
   browser_download_url?: unknown;
 }
 
+/** Where the APK is mirrored beside the website. The version in the path keeps it honest. */
+export function mirrorApkUrl(version: string): string {
+  return `${WEB_ORIGIN}/updates/Walnut-${version}.apk`;
+}
+
 /**
  * The APK inside a release feed. Each release publishes it twice (Walnut.apk and
- * Walnut-<version>.apk), so the stable name wins. The direct asset URL is used instead of the
- * releases/latest/download redirect: one hop fewer on a connection where every hop hurts.
+ * Walnut-<version>.apk), so the stable name wins.
  */
 export function pickApkAsset(assets: unknown): { url: string; bytes: number } | null {
   if (!Array.isArray(assets)) return null;
@@ -53,6 +62,18 @@ export function pickApkAsset(assets: unknown): { url: string; bytes: number } | 
   const bytes =
     typeof chosen.size === 'number' && Number.isFinite(chosen.size) && chosen.size > 0 ? chosen.size : 0;
   return { url: chosen.browser_download_url, bytes };
+}
+
+/**
+ * Every place this version can be fetched from, best first. The mirror is a known path for a
+ * specific version, so it can never serve the wrong build; if it is not deployed it simply
+ * fails and the next source is tried.
+ */
+export function apkCandidateUrls(version: string, asset: { url: string; bytes: number } | null): string[] {
+  const urls = [mirrorApkUrl(version)];
+  if (asset?.url) urls.push(asset.url);
+  urls.push(ANDROID_DOWNLOAD_URL);
+  return Array.from(new Set(urls));
 }
 
 function readCache(): Cache | null {
@@ -95,7 +116,7 @@ function toUpdate(
   if (compareVersions(version, APP_VERSION) <= 0) return null;
   return {
     version,
-    apkUrl: asset?.url ?? ANDROID_DOWNLOAD_URL,
+    urls: apkCandidateUrls(version, asset),
     bytes: asset?.bytes ?? 0,
     notes,
   };

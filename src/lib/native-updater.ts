@@ -24,7 +24,8 @@ interface ApkUpdaterPlugin {
   canInstall(): Promise<{ allowed: boolean }>;
   /** Opens the system "install unknown apps" screen for Walnut. */
   openInstallSettings(): Promise<void>;
-  download(options: { url: string; bytes?: number }): Promise<ApkDownloadResult>;
+  /** Sources in order of preference; the plugin moves to the next one if a source fails. */
+  download(options: { urls?: string[]; url?: string; bytes?: number }): Promise<ApkDownloadResult>;
   install(): Promise<void>;
   addListener(
     eventName: 'progress',

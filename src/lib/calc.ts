@@ -1,5 +1,5 @@
 import { buildActivity } from './activity';
-import type { Account, AppData, Favor, Loan, RecurringRule, Transaction } from './types';
+import type { Account, AppData, Favor, Loan, Person, RecurringRule, Transaction } from './types';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -37,22 +37,43 @@ export function loanTotals(loans: Loan[]): LoanTotals {
   return { owe, owed, net: owed - owe };
 }
 
-export interface FavorTotals {
-  theyCovered: number; // owed back to friends who paid for me
-  iCovered: number; // friends still owe me
-  net: number; // theyCovered - iCovered
+export interface FavorBalance {
+  theyCovered: number; // what they paid for me
+  iCovered: number; // what I paid for them
+  net: number; // theyCovered - iCovered; positive means I still owe them
+  settled: boolean; // the two sides cancel out
 }
 
-/** Running totals of favors nobody has settled yet. */
-export function favorTotals(favors: Favor[]): FavorTotals {
+/**
+ * One person's favor ledger. Settlement is arithmetic, not a stored flag: once I have paid
+ * for them as much as they paid for me, the person reads as settled.
+ */
+export function favorBalance(favors: Favor[]): FavorBalance {
   let theyCovered = 0;
   let iCovered = 0;
   for (const favor of favors) {
-    if (favor.settled) continue;
     if (favor.direction === 'theyCovered') theyCovered += favor.amount;
     else iCovered += favor.amount;
   }
-  return { theyCovered, iCovered, net: theyCovered - iCovered };
+  const net = theyCovered - iCovered;
+  return { theyCovered, iCovered, net, settled: net === 0 };
+}
+
+export interface FavorSummary {
+  owe: number; // across the people I still owe
+  owed: number; // across the people who still owe me
+}
+
+/** Headline figures: a person whose two sides cancel out contributes nothing. */
+export function favorSummary(favors: Favor[], people: Person[]): FavorSummary {
+  let owe = 0;
+  let owed = 0;
+  for (const person of people) {
+    const { net } = favorBalance(favors.filter((favor) => favor.personId === person.id));
+    if (net > 0) owe += net;
+    else if (net < 0) owed += -net;
+  }
+  return { owe, owed };
 }
 
 /** Balance of one account: opening balance plus its transactions and loan cash movements. */

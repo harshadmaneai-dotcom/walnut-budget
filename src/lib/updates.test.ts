@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pickApkAsset } from './updates';
+import { apkCandidateUrls, mirrorApkUrl, pickApkAsset } from './updates';
 
 describe('pickApkAsset', () => {
   it('prefers the stable Walnut.apk name over the versioned copy', () => {
@@ -22,5 +22,22 @@ describe('pickApkAsset', () => {
     expect(pickApkAsset([])).toBeNull();
     expect(pickApkAsset([{ name: 'Walnut.apk' }])).toBeNull();
     expect(pickApkAsset([{ size: 10, browser_download_url: 'https://example.test/latest.yml' }])).toBeNull();
+  });
+});
+
+describe('apkCandidateUrls', () => {
+  it('tries the website mirror first and keeps GitHub last', () => {
+    const urls = apkCandidateUrls('2.0.20', { url: 'https://example.test/Walnut.apk', bytes: 10 });
+    expect(urls[0]).toBe(mirrorApkUrl('2.0.20'));
+    expect(urls[0]).toContain('/updates/Walnut-2.0.20.apk');
+    expect(urls[1]).toBe('https://example.test/Walnut.apk');
+    expect(urls[urls.length - 1]).toContain('releases/latest/download/Walnut.apk');
+  });
+
+  it('still falls back to GitHub when the feed carries no APK asset', () => {
+    const urls = apkCandidateUrls('2.0.20', null);
+    expect(urls).toHaveLength(2);
+    expect(urls[0]).toBe(mirrorApkUrl('2.0.20'));
+    expect(urls[1]).toContain('releases/latest/download/Walnut.apk');
   });
 });

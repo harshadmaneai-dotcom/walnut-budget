@@ -250,6 +250,26 @@ jobs:
 
           echo "Release v$VERSION is live for desktop and Android."
 
+      # The APK is mirrored beside the website so phones download it from the same fast host
+      # instead of GitHub's release storage, which crawls on some networks. The version in the
+      # filename means a stale mirror can never be mistaken for the current build.
+      - name: Mirror the APK for in-app updates
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.v.outputs.version }}"
+          mkdir -p public/updates
+          rm -f public/updates/Walnut-*.apk
+          cp artifacts/android/Walnut.apk "public/updates/Walnut-$VERSION.apk"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/updates
+          if git diff --cached --quiet; then
+            echo "the mirror already carries $VERSION"
+          else
+            git commit -m "Mirror the Walnut $VERSION APK for in-app updates"
+            git push origin HEAD:main
+          fi
+
       # Optional: set the VERCEL_DEPLOY_HOOK secret to publish the website with every release.
       - name: Deploy the website
         if: env.VERCEL_DEPLOY_HOOK != ''

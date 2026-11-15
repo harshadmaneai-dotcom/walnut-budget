@@ -66,21 +66,27 @@ export interface Loan {
   repayments: Repayment[];
 }
 
-/** Who spent the money on a favor: a friend covered my bill, or I covered theirs. */
+/** Someone you swap favors with, kept as a reusable entry in the picker. */
+export interface Person {
+  id: string;
+  name: string;
+}
+
+/** Who spent the money on a favor: they covered my bill, or I covered theirs. */
 export type FavorDirection = 'theyCovered' | 'iCovered';
 
 /**
- * An informal debt, like a friend paying for dinner. Favors are tracked only: no cash left or
- * entered an account, so they never change an account balance or appear in the ledger.
+ * One entry in a person's favor ledger, like a repayment on a loan. Favors are tracked only:
+ * no cash left or entered an account, so they never change an account balance. Whether the
+ * two sides balance is worked out from the amounts, not stored as a flag.
  */
 export interface Favor {
   id: string;
-  person: string;
+  personId: string;
   amount: number;
   date: string; // YYYY-MM-DD
   note: string;
   direction: FavorDirection;
-  settled: boolean;
 }
 
 export interface RecurringRule {
@@ -109,5 +115,6 @@ export interface AppData {
   transfers: Transfer[];
   loans: Loan[];
   favors: Favor[];
+  favorPeople: Person[];
   recurring: RecurringRule[];
 }

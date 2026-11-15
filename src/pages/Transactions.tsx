@@ -145,9 +145,10 @@ export function Transactions({ store }: { store: Store }) {
     return (
       <td className="bal-cell">
         {accounts.map((account) => (
-          <span key={account.accountId}>
-            {account.name} <strong>{formatMoney(account.balance, cur)}</strong>
-          </span>
+          <div className="bal-row" key={account.accountId}>
+            <span>{account.name}</span>
+            <strong>{formatMoney(account.balance, cur)}</strong>
+          </div>
         ))}
       </td>
     );
@@ -235,16 +236,20 @@ export function Transactions({ store }: { store: Store }) {
                     const moneyOut = entry.loan.direction === 'borrowed';
                     return (
                       <tr key={`repayment-${entry.loan.id}-${r.id}`}>
-                        <td>{formatDate(r.date)}</td>
-                        <td>Loan repayment</td>
-                        <td>{entry.loan.counterparty}</td>
-                        <td className="muted">{r.note}</td>
-                        <td className={`num ${moneyOut ? 'neg' : 'pos'}`}>
+                        <td className="tx-date">{formatDate(r.date)}</td>
+                        <td className="tx-cat">Loan repayment</td>
+                        <td className="tx-acc">{entry.loan.counterparty}</td>
+                        <td className="tx-note muted">{r.note}</td>
+                        <td className={`num tx-amt ${moneyOut ? 'neg' : 'pos'}`}>
                           {moneyOut ? '−' : '+'}{formatMoney(r.amount, cur)}
                         </td>
                         {balanceAfter(entry)}
-                        <td style={{ textAlign: 'right' }}>
-                          <a className="btn small" href="#loans">Open loan</a>
+                        <td className="tx-actions">
+                          <div>
+                            <a className="icon-btn" href="#loans" aria-label="Open loan" title="Open loan">
+                              <Icon name="users" size={16} />
+                            </a>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -254,14 +259,14 @@ export function Transactions({ store }: { store: Store }) {
                     const t = entry.transfer;
                     return (
                       <tr key={`transfer-${t.id}`}>
-                        <td>{formatDate(t.date)}</td>
-                        <td>Transfer</td>
-                        <td>{accName(t.fromAccountId)} → {accName(t.toAccountId)}</td>
-                        <td className="muted">{t.note}</td>
-                        <td className="num muted">{formatMoney(t.amount, cur)}</td>
+                        <td className="tx-date">{formatDate(t.date)}</td>
+                        <td className="tx-cat">Transfer</td>
+                        <td className="tx-acc">{accName(t.fromAccountId)} → {accName(t.toAccountId)}</td>
+                        <td className="tx-note muted">{t.note}</td>
+                        <td className="num tx-amt muted">{formatMoney(t.amount, cur)}</td>
                         {balanceAfter(entry)}
-                        <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <td className="tx-actions">
+                          <div>
                             <button className="icon-btn" aria-label="Edit transfer" onClick={() => setEditingTransfer(t)}>
                               <Icon name="pencil" size={16} />
                             </button>
@@ -277,16 +282,16 @@ export function Transactions({ store }: { store: Store }) {
                   const t = entry.tx;
                   return (
                     <tr key={`tx-${t.id}`}>
-                      <td>{formatDate(t.date)}</td>
-                      <td>{catName(t.categoryId)}{t.recurringId && <span className="badge up" style={{ marginLeft: 8 }}>Recurring</span>}</td>
-                      <td>{accName(t.accountId)}</td>
-                      <td className="muted">{t.note}</td>
-                      <td className={`num ${t.type === 'income' ? 'pos' : 'neg'}`}>
+                      <td className="tx-date">{formatDate(t.date)}</td>
+                      <td className="tx-cat">{catName(t.categoryId)}{t.recurringId && <span className="badge up" style={{ marginLeft: 8 }}>Recurring</span>}</td>
+                      <td className="tx-acc">{accName(t.accountId)}</td>
+                      <td className="tx-note muted">{t.note}</td>
+                      <td className={`num tx-amt ${t.type === 'income' ? 'pos' : 'neg'}`}>
                         {t.type === 'income' ? '+' : '−'}{formatMoney(t.amount, cur)}
                       </td>
                       {balanceAfter(entry)}
-                      <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <td className="tx-actions">
+                        <div>
                           <button className="icon-btn" aria-label="Edit transaction" onClick={() => setEditing(t)}>
                             <Icon name="pencil" size={16} />
                           </button>

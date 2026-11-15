@@ -15,6 +15,7 @@ import android.provider.Settings;
 
 import androidx.core.content.FileProvider;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -24,7 +25,9 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -33,11 +36,13 @@ import java.util.Set;
  * Android always shows its own install confirmation for apps outside the Play Store; this
  * plugin removes every other step (browser, file manager, unknown-source digging).
  *
- * Downloads are treated as resumable. A second tap, a second screen or a relaunch must never
- * restart a transfer from zero on a slow connection, so:
- *  - a task DownloadManager still owns for the same URL is reused instead of enqueued again;
+ * Downloads are resumable and source-aware. A second tap, a second screen or a relaunch must
+ * never restart a transfer from zero, and a source that is slow or unavailable must not block
+ * the update:
+ *  - a task DownloadManager still owns for any candidate URL is reused instead of enqueued again;
  *  - a file that already arrived complete short-circuits to "install";
- *  - only a partial file, with no task behind it, is discarded before starting over.
+ *  - a failing source moves to the next candidate (usually the website mirror, then GitHub);
+ *  - a partial file is discarded only when no task behind it can finish it.
  */
 @CapacitorPlugin(name = "ApkUpdater")
 public class ApkUpdaterPlugin extends Plugin {
@@ -55,6 +60,8 @@ public class ApkUpdaterPlugin extends Plugin {
     private long expectedBytes = -1;
     private long lastBytes = -1;
     private long lastBytesAt = 0;
+    private List<String> candidates = new ArrayList<>();
+    private int candidateIndex = 0;
 
     @Override
     public void load() {
@@ -118,6 +125,27 @@ public class ApkUpdaterPlugin extends Plugin {
     private boolean canInstallPackages() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true;
         return getContext().getPackageManager().canRequestPackageInstalls();
+    }
+
+    /** Every candidate URL handed in, preferring the modern array form. */
+    private static List<String> readUrls(PluginCall call) {
+        List<String> urls = new ArrayList<>();
+        JSArray list = call.getArray("urls");
+        if (list != null) {
+            for (int i = 0; i < list.length(); i++) {
+                try {
+                    String value = list.getString(i);
+                    if (value != null && !value.isEmpty() && !urls.contains(value)) urls.add(value);
+                } catch (Exception ignored) {
+                    // A non-string entry is simply skipped.
+                }
+            }
+        }
+        if (urls.isEmpty()) {
+            String single = call.getString("url");
+            if (single != null && !single.isEmpty()) urls.add(single);
+        }
+        return urls;
     }
 
     /**
@@ -185,44 +213,91 @@ public class ApkUpdaterPlugin extends Plugin {
         }
     }
 
+    /** Enqueues one source. Returns false when DownloadManager refuses it. */
+    private boolean enqueue(String url, long publishedBytes) {
+        try {
+            File target = updateFile();
+            if (target.exists() && !target.delete()) return false;
+
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            request.setTitle("Walnut update");
+            request.setDescription("Downloading the new version");
+            request.setMimeType("application/vnd.android.package-archive");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            // A phone on mobile data must not sit queued for Wi-Fi: this file is a few megabytes.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                request.setAllowedOverMetered(true);
+            }
+            request.setAllowedOverRoaming(true);
+            request.setDestinationInExternalFilesDir(getContext(), null, UPDATE_DIR + "/" + UPDATE_FILE);
+
+            downloadId = downloadManager.enqueue(request);
+            lastBytes = -1;
+            lastBytesAt = System.currentTimeMillis();
+            return true;
+        } catch (Exception error) {
+            return false;
+        }
+    }
+
+    /** Moves to the next source, so one dead or crawling host cannot stall an update. */
+    private boolean tryNextCandidate() {
+        File partial = updateFile();
+        if (partial.exists()) {
+            //noinspection ResultOfMethodCallIgnored
+            partial.delete();
+        }
+        while (candidateIndex + 1 < candidates.size()) {
+            candidateIndex += 1;
+            if (enqueue(candidates.get(candidateIndex), expectedBytes)) return true;
+        }
+        return false;
+    }
+
     @PluginMethod
     public void download(PluginCall call) {
-        String url = call.getString("url");
-        if (url == null) {
+        List<String> urls = readUrls(call);
+        if (urls.isEmpty()) {
             call.reject("A download url is required");
             return;
         }
 
         // An update must never travel over plain HTTP.
-        Uri uri = Uri.parse(url);
-        if (!"https".equals(uri.getScheme())) {
-            call.reject("Updates must be downloaded over HTTPS");
-            return;
+        for (String url : urls) {
+            if (!"https".equals(Uri.parse(url).getScheme())) {
+                call.reject("Updates must be downloaded over HTTPS");
+                return;
+            }
         }
 
         Long published = call.getLong("bytes");
         expectedBytes = published == null ? -1 : published;
+        candidates = urls;
+        candidateIndex = 0;
 
-        File target = updateFile();
-        File directory = target.getParentFile();
+        File directory = updateFile().getParentFile();
         if (directory != null && !directory.exists() && !directory.mkdirs()) {
             call.reject("Could not create the update directory");
             return;
         }
 
-        // Already downloading (a second tap, the other screen, or a relaunch): stay with it.
-        long running = activeDownloadId(url);
-        if (running != -1) {
-            downloadId = running;
-            JSObject result = new JSObject();
-            result.put("completed", false);
-            result.put("resumed", true);
-            call.resolve(result);
-            startPolling();
-            return;
+        // Already downloading (a second tap, the other screen, a relaunch): stay with it.
+        for (int i = 0; i < urls.size(); i++) {
+            long running = activeDownloadId(urls.get(i));
+            if (running != -1) {
+                candidateIndex = i;
+                downloadId = running;
+                JSObject result = new JSObject();
+                result.put("completed", false);
+                result.put("resumed", true);
+                call.resolve(result);
+                startPolling();
+                return;
+            }
         }
 
         // Already downloaded in full by an earlier attempt: there is nothing left to fetch.
+        File target = updateFile();
         if (target.exists() && expectedBytes > 0 && target.length() == expectedBytes) {
             JSObject result = new JSObject();
             result.put("completed", true);
@@ -237,22 +312,8 @@ public class ApkUpdaterPlugin extends Plugin {
             return;
         }
 
-        DownloadManager.Request request = new DownloadManager.Request(uri);
-        request.setTitle("Walnut update");
-        request.setDescription("Downloading the new version");
-        request.setMimeType("application/vnd.android.package-archive");
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-        // A phone on mobile data must not sit queued for Wi-Fi: this file is a few megabytes.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            request.setAllowedOverMetered(true);
-        }
-        request.setAllowedOverRoaming(true);
-        request.setDestinationInExternalFilesDir(getContext(), null, UPDATE_DIR + "/" + UPDATE_FILE);
-
-        try {
-            downloadId = downloadManager.enqueue(request);
-        } catch (Exception error) {
-            call.reject("Could not start the download", error);
+        if (!enqueue(urls.get(0), expectedBytes) && !tryNextCandidate()) {
+            call.reject("Could not start the download");
             return;
         }
 
@@ -298,8 +359,8 @@ public class ApkUpdaterPlugin extends Plugin {
     /**
      * Reports progress about twice a second until it finishes or fails: percentage, bytes so
      * the UI can show real numbers, and a message for the states that are not progress at all
-     * (queued behind Wi-Fi, waiting for the network, a slow link). DownloadManager resumes by
-     * itself, so waiting is reported rather than treated as failure.
+     * (queued behind Wi-Fi, waiting for the network, a slow link, changing source).
+     * DownloadManager resumes by itself, so waiting is reported rather than treated as failure.
      */
     private void startPolling() {
         if (polling) return;
@@ -336,15 +397,21 @@ public class ApkUpdaterPlugin extends Plugin {
 
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
                             File apk = updateFile();
-                            if (!apk.exists() || apk.length() == 0) {
-                                progress.put("error", "the downloaded file is missing");
-                                finished = true;
-                            } else if (expectedBytes > 0 && apk.length() != expectedBytes) {
-                                // A truncated file would install over a good build; drop it.
-                                //noinspection ResultOfMethodCallIgnored
-                                apk.delete();
-                                progress.put("error", "the download came through incomplete");
-                                finished = true;
+                            boolean usable = apk.exists() && apk.length() > 0
+                                && (expectedBytes <= 0 || apk.length() == expectedBytes);
+                            if (!usable) {
+                                // A mirror that answered with something else (a 404 page, a stale
+                                // build) must not reach the installer; try the next source.
+                                if (tryNextCandidate()) {
+                                    progress.put("message", "Trying another server…");
+                                } else {
+                                    if (apk.exists()) {
+                                        //noinspection ResultOfMethodCallIgnored
+                                        apk.delete();
+                                    }
+                                    progress.put("error", "the download came through incomplete");
+                                    finished = true;
+                                }
                             } else {
                                 progress.put("bytes", apk.length());
                                 progress.put("total", apk.length());
@@ -353,8 +420,12 @@ public class ApkUpdaterPlugin extends Plugin {
                                 finished = true;
                             }
                         } else if (status == DownloadManager.STATUS_FAILED) {
-                            progress.put("error", failureReason(reason));
-                            finished = true;
+                            if (tryNextCandidate()) {
+                                progress.put("message", "Trying another server…");
+                            } else {
+                                progress.put("error", failureReason(reason));
+                                finished = true;
+                            }
                         } else if (status == DownloadManager.STATUS_PAUSED) {
                             progress.put("message", pauseReason(reason));
                         } else if (status == DownloadManager.STATUS_PENDING) {

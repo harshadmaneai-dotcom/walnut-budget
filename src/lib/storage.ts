@@ -5,6 +5,7 @@ import type {
   CategoryGroup,
   Favor,
   Loan,
+  Person,
   RecurringRule,
   Repayment,
   Transaction,
@@ -18,7 +19,7 @@ export const STORAGE_PREFIX = 'walnut:data';
 export const LEGACY_STORAGE_KEY = 'budget-tracker:data';
 export const LEGACY_CLAIM_KEY = 'walnut:legacy-claimed';
 
-export const DATA_VERSION = 4;
+export const DATA_VERSION = 5;
 export const INVESTMENT_CATEGORY_ID = 'c-invest';
 
 export const DEFAULT_CATEGORIES: Category[] = [
@@ -47,6 +48,7 @@ export function defaultData(): AppData {
     transfers: [],
     loans: [],
     favors: [],
+    favorPeople: [],
     recurring: [],
   };
 }
@@ -227,21 +229,80 @@ function normalizeLoans(value: unknown): Loan[] {
   return loans;
 }
 
-function normalizeFavors(value: unknown): Favor[] {
+/**
+ * Id derived from a person's name, so every device that migrates the same document agrees on
+ * it. Two devices inventing different ids for "Abhishek" would show up as two people once
+ * their documents sync.
+ */
+export function personIdForName(name: string): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `p-${slug || 'person'}`;
+}
+
+/** Names carried by favor records saved before people existed. */
+function legacyFavorNames(value: unknown): string[] {
+  const names: string[] = [];
+  for (const entry of asArray(value)) {
+    const record = asRecord(entry);
+    const name = asText(record?.person).trim();
+    if (!name) continue;
+    if (names.some((known) => known.toLowerCase() === name.toLowerCase())) continue;
+    names.push(name);
+  }
+  return names;
+}
+
+function normalizePeople(value: unknown, legacyNames: string[]): Person[] {
+  const people: Person[] = [];
+  const seen = new Set<string>();
+  for (const entry of asArray(value)) {
+    const record = asRecord(entry);
+    if (!record || typeof record.id !== 'string' || !record.id || seen.has(record.id)) continue;
+    const name = asText(record.name).trim();
+    if (!name) continue;
+    seen.add(record.id);
+    people.push({ id: record.id, name });
+  }
+  // Documents saved before people existed only stored a name on each favor.
+  for (const name of legacyNames) {
+    const id = personIdForName(name);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    people.push({ id, name });
+  }
+  return people;
+}
+
+function normalizeFavors(value: unknown, people: Person[]): Favor[] {
+  const ids = new Set(people.map((person) => person.id));
+  const byName = new Map(people.map((person) => [person.name.toLowerCase(), person.id]));
   const favors: Favor[] = [];
   for (const entry of asArray(value)) {
     const record = asRecord(entry);
     if (!record || typeof record.id !== 'string' || !record.id) continue;
     // A favor without a real date cannot take its place in the list, so it is dropped.
     if (!isIsoDate(record.date)) continue;
+
+    // Older records carried only a name; the id wins when both are present.
+    let personId =
+      typeof record.personId === 'string' && ids.has(record.personId) ? record.personId : '';
+    if (!personId) {
+      const legacyName = asText(record.person).trim();
+      personId = legacyName ? (byName.get(legacyName.toLowerCase()) ?? personIdForName(legacyName)) : '';
+    }
+    if (!personId) continue;
+
     favors.push({
       id: record.id,
-      person: asText(record.person, 'Someone'),
+      personId,
       amount: Math.max(0, asCents(record.amount)),
       date: record.date,
       note: asText(record.note),
       direction: record.direction === 'iCovered' ? 'iCovered' : 'theyCovered',
-      settled: record.settled === true,
     });
   }
   return favors;
@@ -299,6 +360,8 @@ export function normalizeData(data: AppData): AppData {
   const settings = asRecord(source.settings) ?? {};
   const accounts = normalizeAccounts(source.accounts);
   const categories = normalizeCategories(source.categories);
+  // People must exist before the entries that point at them.
+  const favorPeople = normalizePeople(source.favorPeople, legacyFavorNames(source.favors));
   const fallback = defaultData();
 
   return {
@@ -313,7 +376,8 @@ export function normalizeData(data: AppData): AppData {
     transactions: normalizeTransactions(source.transactions),
     transfers: normalizeTransfers(source.transfers),
     loans: normalizeLoans(source.loans),
-    favors: normalizeFavors(source.favors),
+    favors: normalizeFavors(source.favors, favorPeople),
+    favorPeople,
     recurring: normalizeRecurring(source.recurring),
   };
 }
@@ -344,6 +408,7 @@ export function isBlankData(data: AppData): boolean {
     data.transfers.length === 0 &&
     data.loans.length === 0 &&
     data.favors.length === 0 &&
+    data.favorPeople.length === 0 &&
     data.recurring.length === 0 &&
     data.accounts.every((a) => a.openingBalance === 0)
   );

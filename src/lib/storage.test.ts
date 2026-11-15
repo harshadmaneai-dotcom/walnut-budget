@@ -132,25 +132,55 @@ describe('parseData', () => {
 });
 
 describe('favors', () => {
-  it('fills in an empty list for documents saved before favors existed', () => {
+  it('fills in empty lists for documents saved before favors existed', () => {
     const data = normalizeData({ ...defaultData(), favors: undefined } as never);
     expect(data.favors).toEqual([]);
+    expect(data.favorPeople).toEqual([]);
   });
 
-  it('keeps usable favors and drops the ones it cannot place', () => {
+  it('turns names on old favor records into people with ids every device agrees on', () => {
     const data = normalizeData({
       ...defaultData(),
       favors: [
-        { id: 'f1', person: 'Sam', amount: 25_00, date: '2026-11-01', note: 'Dinner', direction: 'theyCovered', settled: false },
-        { id: 'no-date', person: 'Sam', amount: 10_00, date: 'yesterday', direction: 'iCovered', settled: false },
-        { person: 'No id', amount: 5_00, date: '2026-11-02', direction: 'iCovered' },
-        { id: 'f2', person: 'Riya', amount: '12.50', date: '2026-11-03', note: '', direction: 'iCovered', settled: 'yes' },
+        { id: 'f1', person: 'Abhishek', amount: 30_00, date: '2026-11-14', note: 'Cigarettes', direction: 'theyCovered', settled: false },
+        { id: 'f2', person: 'Abhishek', amount: 10_00, date: '2026-11-15', note: '', direction: 'iCovered', settled: true },
+        { id: 'f3', person: 'Riya', amount: 5_00, date: '2026-11-15', note: '', direction: 'theyCovered', settled: false },
       ],
     } as never);
 
-    expect(data.favors.map((f) => f.id)).toEqual(['f1', 'f2']);
-    // A stray string amount becomes 0 rather than poisoning the totals, and "yes" is not settled.
-    expect(data.favors[1]).toMatchObject({ amount: 0, settled: false, direction: 'iCovered' });
+    expect(data.favorPeople).toEqual([
+      { id: 'p-abhishek', name: 'Abhishek' },
+      { id: 'p-riya', name: 'Riya' },
+    ]);
+    expect(data.favors.map((favor) => favor.personId)).toEqual(['p-abhishek', 'p-abhishek', 'p-riya']);
+    // The old settled flag is gone: the balance comes from the amounts themselves.
+    expect(data.favors.every((favor) => !('settled' in favor))).toBe(true);
+  });
+
+  it('is idempotent, so re-normalising does not duplicate people', () => {
+    const once = normalizeData({
+      ...defaultData(),
+      favors: [{ id: 'f1', person: 'Abhishek', amount: 30_00, date: '2026-11-14', note: '', direction: 'theyCovered' }],
+    } as never);
+    const twice = normalizeData(once);
+    expect(twice.favorPeople).toEqual(once.favorPeople);
+    expect(twice.favors).toEqual(once.favors);
+  });
+
+  it('drops the entries it cannot place and clamps bad amounts', () => {
+    const data = normalizeData({
+      ...defaultData(),
+      favorPeople: [{ id: 'p-sam', name: 'Sam' }],
+      favors: [
+        { id: 'f1', personId: 'p-sam', amount: 25_00, date: '2026-11-01', note: 'Dinner', direction: 'theyCovered' },
+        { id: 'no-date', personId: 'p-sam', amount: 10_00, date: 'yesterday', direction: 'iCovered' },
+        { id: 'no-person', amount: 5_00, date: '2026-11-02', direction: 'iCovered' },
+        { id: 'f2', personId: 'p-sam', amount: '12.50', date: '2026-11-03', note: '', direction: 'iCovered' },
+      ],
+    } as never);
+
+    expect(data.favors.map((favor) => favor.id)).toEqual(['f1', 'f2']);
+    expect(data.favors[1]).toMatchObject({ amount: 0, direction: 'iCovered', personId: 'p-sam' });
   });
 });
 

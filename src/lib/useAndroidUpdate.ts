@@ -60,9 +60,10 @@ export function useAndroidUpdate(): AndroidUpdater {
   const install = useCallback(async () => {
     if (!update || starting.current) return;
 
-    // Builds without the plugin can still update, just through the browser.
+    // Builds without the plugin can still update, just through the browser. The last candidate
+    // is GitHub's stable link, which works without the mirror being deployed.
     if (!apkUpdaterAvailable()) {
-      window.location.href = update.apkUrl;
+      window.location.href = update.urls[update.urls.length - 1];
       return;
     }
 
@@ -110,7 +111,7 @@ export function useAndroidUpdate(): AndroidUpdater {
         }
       });
 
-      const result = await ApkUpdater.download({ url: update.apkUrl, bytes: update.bytes });
+      const result = await ApkUpdater.download({ urls: update.urls, bytes: update.bytes });
       if (result?.completed) {
         // An earlier attempt already fetched the whole file; there is nothing to wait for.
         void handle?.remove();

@@ -5,7 +5,8 @@ import {
   applyRecurring,
   balanceKey,
   balancesAfterEntries,
-  favorTotals,
+  favorBalance,
+  favorSummary,
   loanStatus,
   loanTotals,
   monthTotals,
@@ -199,21 +200,46 @@ describe('balances after each entry', () => {
 });
 
 describe('favors', () => {
-  const favors = [
-    { id: 'f1', person: 'Sam', amount: 100_00, date: '2026-11-01', note: '', direction: 'theyCovered' as const, settled: false },
-    { id: 'f2', person: 'Sam', amount: 40_00, date: '2026-11-02', note: '', direction: 'iCovered' as const, settled: false },
-    { id: 'f3', person: 'Riya', amount: 25_00, date: '2026-11-03', note: '', direction: 'theyCovered' as const, settled: true },
+  const sam = { id: 'p-sam', name: 'Sam' };
+  const riya = { id: 'p-riya', name: 'Riya' };
+  const entries = [
+    { id: 'f1', personId: 'p-sam', amount: 100_00, date: '2026-11-01', note: '', direction: 'theyCovered' as const },
+    { id: 'f2', personId: 'p-sam', amount: 40_00, date: '2026-11-02', note: '', direction: 'iCovered' as const },
+    { id: 'f3', personId: 'p-riya', amount: 25_00, date: '2026-11-03', note: '', direction: 'theyCovered' as const },
   ];
 
-  it('totals only the favors nobody has settled yet', () => {
-    expect(favorTotals(favors)).toEqual({ theyCovered: 100_00, iCovered: 40_00, net: 60_00 });
+  it('subtracts what I covered from what they covered', () => {
+    expect(favorBalance(entries.filter((entry) => entry.personId === 'p-sam'))).toEqual({
+      theyCovered: 100_00,
+      iCovered: 40_00,
+      net: 60_00,
+      settled: false,
+    });
   });
 
-  it('is zero when everything is settled', () => {
-    expect(favorTotals(favors.map((f) => ({ ...f, settled: true })))).toEqual({
-      theyCovered: 0,
-      iCovered: 0,
-      net: 0,
-    });
+  it('counts as settled when both sides are equal, and flips once I pay more', () => {
+    const paidBack = [
+      ...entries.filter((entry) => entry.personId === 'p-sam'),
+      { id: 'f4', personId: 'p-sam', amount: 60_00, date: '2026-11-04', note: '', direction: 'iCovered' as const },
+    ];
+    expect(favorBalance(paidBack)).toEqual({ theyCovered: 100_00, iCovered: 100_00, net: 0, settled: true });
+
+    const overpaid = [
+      ...paidBack,
+      { id: 'f5', personId: 'p-sam', amount: 10_00, date: '2026-11-05', note: '', direction: 'iCovered' as const },
+    ];
+    expect(favorBalance(overpaid).net).toBe(-10_00);
+  });
+
+  it('sums only the people whose two sides do not cancel out', () => {
+    // Sam is 100 - 40 = 60 down, Riya is 25 down, so 85 is still owed in total.
+    expect(favorSummary(entries, [sam, riya])).toEqual({ owe: 85_00, owed: 0 });
+
+    // Paying Sam the 60 that was left leaves only Riya outstanding.
+    const settledSam = [
+      ...entries,
+      { id: 'f4', personId: 'p-sam', amount: 60_00, date: '2026-11-04', note: '', direction: 'iCovered' as const },
+    ];
+    expect(favorSummary(settledSam, [sam, riya])).toEqual({ owe: 25_00, owed: 0 });
   });
 });
