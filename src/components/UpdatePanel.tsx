@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { isNativeShell } from '../lib/platform';
 import { APP_VERSION } from '../lib/version';
+import { formatMegabytes } from '../lib/format';
 import { useAndroidUpdate } from '../lib/useAndroidUpdate';
 
 /**
@@ -93,8 +94,14 @@ function DesktopUpdate() {
 
 /** Android only: compares with the published release and installs it in place. */
 function AndroidUpdate() {
-  const { stage, update, percent, message, check, install } = useAndroidUpdate();
+  const { stage, update, percent, progressBytes, progressTotal, message, check, install } = useAndroidUpdate();
   const busy = stage === 'downloading' || stage === 'installing';
+
+  // Real numbers, so a slow release host reads as a slow download rather than a stuck one.
+  const transfer =
+    progressTotal > 0 ? `${formatMegabytes(progressBytes)} of ${formatMegabytes(progressTotal)}` : '';
+  const status =
+    message || (stage === 'downloading' && transfer ? `Downloading… ${percent}% · ${transfer}` : '');
 
   return (
     <section className="card col-6">
@@ -123,9 +130,9 @@ function AndroidUpdate() {
           <span style={{ width: `${percent}%` }} />
         </div>
       )}
-      {message && (
+      {status && (
         <p className={stage === 'error' ? 'error' : 'muted'} style={{ marginTop: 12 }}>
-          {message}
+          {status}
         </p>
       )}
       {update && (

@@ -32,6 +32,12 @@ import java.util.Set;
  *
  * Android always shows its own install confirmation for apps outside the Play Store; this
  * plugin removes every other step (browser, file manager, unknown-source digging).
+ *
+ * Downloads are treated as resumable. A second tap, a second screen or a relaunch must never
+ * restart a transfer from zero on a slow connection, so:
+ *  - a task DownloadManager still owns for the same URL is reused instead of enqueued again;
+ *  - a file that already arrived complete short-circuits to "install";
+ *  - only a partial file, with no task behind it, is discarded before starting over.
  */
 @CapacitorPlugin(name = "ApkUpdater")
 public class ApkUpdaterPlugin extends Plugin {
@@ -39,11 +45,16 @@ public class ApkUpdaterPlugin extends Plugin {
     private static final String UPDATE_DIR = "updates";
     private static final String UPDATE_FILE = "Walnut.apk";
     private static final long POLL_INTERVAL_MS = 500;
+    /** How long a transfer may report no new bytes before the UI says the link is slow. */
+    private static final long SLOW_AFTER_MS = 60_000;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private DownloadManager downloadManager;
     private long downloadId = -1;
     private boolean polling = false;
+    private long expectedBytes = -1;
+    private long lastBytes = -1;
+    private long lastBytesAt = 0;
 
     @Override
     public void load() {
@@ -109,6 +120,51 @@ public class ApkUpdaterPlugin extends Plugin {
         return getContext().getPackageManager().canRequestPackageInstalls();
     }
 
+    /**
+     * An unfinished DownloadManager task for this exact URL, so pressing Install again keeps
+     * the bytes already downloaded. A task left over from a different build is dropped, since
+     * resuming it would install the wrong version.
+     */
+    private long activeDownloadId(String url) {
+        long active = -1;
+        long stale = -1;
+        try (Cursor cursor = downloadManager.query(new DownloadManager.Query())) {
+            if (cursor == null) return -1;
+            while (cursor.moveToNext()) {
+                String taskUrl = cursor.getString(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_URI));
+                if (!url.equals(taskUrl)) continue;
+
+                int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                boolean running = status == DownloadManager.STATUS_RUNNING
+                    || status == DownloadManager.STATUS_PENDING
+                    || status == DownloadManager.STATUS_PAUSED;
+                if (!running) continue;
+
+                long id = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_ID));
+                long total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+                if (expectedBytes > 0 && total > 0 && total != expectedBytes) {
+                    stale = id;
+                    continue;
+                }
+                active = id;
+                break;
+            }
+        } catch (Exception ignored) {
+            // An unusual ROM with a missing column must not break updating.
+        }
+        // Cancelling inside the open cursor would invalidate it, so the stale task goes after.
+        if (stale != -1) dislikeQuietly(stale);
+        return active;
+    }
+
+    private void dislikeQuietly(long id) {
+        try {
+            downloadManager.remove(id);
+        } catch (Exception ignored) {
+            // Nothing to clean up if the task already finished or was cleared.
+        }
+    }
+
     @PluginMethod
     public void canInstall(PluginCall call) {
         JSObject result = new JSObject();
@@ -144,13 +200,38 @@ public class ApkUpdaterPlugin extends Plugin {
             return;
         }
 
+        Long published = call.getLong("bytes");
+        expectedBytes = published == null ? -1 : published;
+
         File target = updateFile();
         File directory = target.getParentFile();
         if (directory != null && !directory.exists() && !directory.mkdirs()) {
             call.reject("Could not create the update directory");
             return;
         }
-        // DownloadManager refuses to overwrite, and a stale file would install the old build.
+
+        // Already downloading (a second tap, the other screen, or a relaunch): stay with it.
+        long running = activeDownloadId(url);
+        if (running != -1) {
+            downloadId = running;
+            JSObject result = new JSObject();
+            result.put("completed", false);
+            result.put("resumed", true);
+            call.resolve(result);
+            startPolling();
+            return;
+        }
+
+        // Already downloaded in full by an earlier attempt: there is nothing left to fetch.
+        if (target.exists() && expectedBytes > 0 && target.length() == expectedBytes) {
+            JSObject result = new JSObject();
+            result.put("completed", true);
+            result.put("resumed", true);
+            call.resolve(result);
+            return;
+        }
+
+        // Only here is the old file useless: it is partial and no task is going to finish it.
         if (target.exists() && !target.delete()) {
             call.reject("Could not replace the previous download");
             return;
@@ -160,7 +241,12 @@ public class ApkUpdaterPlugin extends Plugin {
         request.setTitle("Walnut update");
         request.setDescription("Downloading the new version");
         request.setMimeType("application/vnd.android.package-archive");
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+        // A phone on mobile data must not sit queued for Wi-Fi: this file is a few megabytes.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            request.setAllowedOverMetered(true);
+        }
+        request.setAllowedOverRoaming(true);
         request.setDestinationInExternalFilesDir(getContext(), null, UPDATE_DIR + "/" + UPDATE_FILE);
 
         try {
@@ -170,14 +256,56 @@ public class ApkUpdaterPlugin extends Plugin {
             return;
         }
 
-        call.resolve();
+        JSObject result = new JSObject();
+        result.put("completed", false);
+        result.put("resumed", false);
+        call.resolve(result);
         startPolling();
     }
 
-    /** Reports download progress about twice a second until it finishes or fails. */
+    private static String failureReason(int reason) {
+        switch (reason) {
+            case DownloadManager.ERROR_INSUFFICIENT_SPACE:
+                return "there is not enough free space";
+            case DownloadManager.ERROR_FILE_ERROR:
+                return "the file could not be written";
+            case DownloadManager.ERROR_HTTP_DATA_ERROR:
+                return "the connection dropped";
+            case DownloadManager.ERROR_UNHANDLED_HTTP_CODE:
+                return "the download server refused it";
+            case DownloadManager.ERROR_TOO_MANY_REDIRECTS:
+                return "the download was redirected too often";
+            case DownloadManager.ERROR_CANNOT_RESUME:
+                return "it could not resume";
+            default:
+                return "the download failed";
+        }
+    }
+
+    private static String pauseReason(int reason) {
+        switch (reason) {
+            case DownloadManager.PAUSED_QUEUED_FOR_WIFI:
+                return "waiting for Wi-Fi — mobile data downloads are blocked";
+            case DownloadManager.PAUSED_WAITING_FOR_NETWORK:
+                return "waiting for a connection…";
+            case DownloadManager.PAUSED_WAITING_TO_RETRY:
+                return "waiting to retry…";
+            default:
+                return "download paused…";
+        }
+    }
+
+    /**
+     * Reports progress about twice a second until it finishes or fails: percentage, bytes so
+     * the UI can show real numbers, and a message for the states that are not progress at all
+     * (queued behind Wi-Fi, waiting for the network, a slow link). DownloadManager resumes by
+     * itself, so waiting is reported rather than treated as failure.
+     */
     private void startPolling() {
         if (polling) return;
         polling = true;
+        lastBytes = -1;
+        lastBytesAt = System.currentTimeMillis();
         handler.post(new Runnable() {
             @Override
             public void run() {
@@ -185,27 +313,64 @@ public class ApkUpdaterPlugin extends Plugin {
                 boolean finished = false;
                 JSObject progress = new JSObject();
                 progress.put("percent", 0);
+                progress.put("bytes", 0);
+                progress.put("total", 0);
 
                 DownloadManager.Query query = new DownloadManager.Query().setFilterById(downloadId);
                 try (Cursor cursor = downloadManager.query(query)) {
-                    if (cursor != null && cursor.moveToFirst()) {
+                    if (cursor == null || !cursor.moveToFirst()) {
+                        progress.put("error", "the download was cleared");
+                        finished = true;
+                    } else {
                         int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                        int reason = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON));
                         long downloaded = cursor.getLong(
                             cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
                         long total = cursor.getLong(
                             cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+                        if (total <= 0 && expectedBytes > 0) total = expectedBytes;
+
+                        progress.put("bytes", downloaded);
+                        progress.put("total", total);
                         progress.put("percent", total > 0 ? (int) Math.min(100, (downloaded * 100) / total) : 0);
 
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                            progress.put("done", true);
-                            finished = true;
+                            File apk = updateFile();
+                            if (!apk.exists() || apk.length() == 0) {
+                                progress.put("error", "the downloaded file is missing");
+                                finished = true;
+                            } else if (expectedBytes > 0 && apk.length() != expectedBytes) {
+                                // A truncated file would install over a good build; drop it.
+                                //noinspection ResultOfMethodCallIgnored
+                                apk.delete();
+                                progress.put("error", "the download came through incomplete");
+                                finished = true;
+                            } else {
+                                progress.put("bytes", apk.length());
+                                progress.put("total", apk.length());
+                                progress.put("percent", 100);
+                                progress.put("done", true);
+                                finished = true;
+                            }
                         } else if (status == DownloadManager.STATUS_FAILED) {
-                            progress.put("error", "download failed");
+                            progress.put("error", failureReason(reason));
                             finished = true;
+                        } else if (status == DownloadManager.STATUS_PAUSED) {
+                            progress.put("message", pauseReason(reason));
+                        } else if (status == DownloadManager.STATUS_PENDING) {
+                            progress.put("message", "Waiting to start…");
+                        } else {
+                            long now = System.currentTimeMillis();
+                            if (downloaded > lastBytes) {
+                                lastBytes = downloaded;
+                                lastBytesAt = now;
+                            } else if (now - lastBytesAt > SLOW_AFTER_MS) {
+                                progress.put("message", "Slow connection — still downloading…");
+                            }
                         }
                     }
                 } catch (Exception error) {
-                    progress.put("error", "download failed");
+                    progress.put("error", "the download failed");
                     finished = true;
                 }
 

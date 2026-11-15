@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { isNativeShell } from '../lib/platform';
 import { APP_VERSION } from '../lib/version';
+import { formatMegabytes } from '../lib/format';
 import { useAndroidUpdate } from '../lib/useAndroidUpdate';
 
 /** Mirrors UpdateState in electron/main.ts and electron/preload.ts. */
@@ -124,7 +125,18 @@ function DesktopUpdateBanner() {
  * here, so a launch never waits on GitHub) and offers a one-tap install.
  */
 function AndroidUpdateBanner() {
-  const { stage, update, percent, check, install, dismissed, dismiss } = useAndroidUpdate();
+  const {
+    stage,
+    update,
+    percent,
+    progressBytes,
+    progressTotal,
+    message,
+    check,
+    install,
+    dismissed,
+    dismiss,
+  } = useAndroidUpdate();
 
   useEffect(() => {
     void check(false);
@@ -133,13 +145,16 @@ function AndroidUpdateBanner() {
   if (!update || dismissed) return null;
   const busy = stage === 'downloading' || stage === 'installing';
 
+  const transfer =
+    progressTotal > 0 ? `${formatMegabytes(progressBytes)} of ${formatMegabytes(progressTotal)}` : '';
+
   return (
     <div className="update-banner" role="status" aria-live="polite">
       <div className="update-text">
         <strong>Walnut {update.version} is available</strong>
         <span>
           {stage === 'downloading'
-            ? `Downloading… ${percent}%`
+            ? message || (transfer ? `Downloading… ${percent}% · ${transfer}` : `Downloading… ${percent}%`)
             : stage === 'installing'
               ? 'Opening the installer…'
               : `You are on v${APP_VERSION}.`}

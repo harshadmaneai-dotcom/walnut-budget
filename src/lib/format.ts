@@ -54,3 +54,9 @@ export function formatDate(date: string): string {
 export function monthLabel(month: string): string {
   return new Date(`${month}-01T00:00:00`).toLocaleDateString('en-US', { month: 'short' });
 }
+
+/** Download size for the update panels, e.g. "3.4 MB". */
+export function formatMegabytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 MB';
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}

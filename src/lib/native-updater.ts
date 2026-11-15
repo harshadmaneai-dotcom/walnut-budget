@@ -4,6 +4,19 @@ export interface ApkDownloadProgress {
   percent: number;
   done?: boolean;
   error?: string;
+  /** Bytes transferred so far, so a slow link shows real numbers instead of a frozen bar. */
+  bytes?: number;
+  /** Published size of the APK, or 0 when the server did not say. */
+  total?: number;
+  /** "Waiting for a connection…", "Slow connection…" and similar non-progress states. */
+  message?: string;
+}
+
+export interface ApkDownloadResult {
+  /** True when the APK was already downloaded in full, so there is nothing left to fetch. */
+  completed?: boolean;
+  /** True when an in-flight download was picked up instead of starting a second one. */
+  resumed?: boolean;
 }
 
 interface ApkUpdaterPlugin {
@@ -11,7 +24,7 @@ interface ApkUpdaterPlugin {
   canInstall(): Promise<{ allowed: boolean }>;
   /** Opens the system "install unknown apps" screen for Walnut. */
   openInstallSettings(): Promise<void>;
-  download(options: { url: string }): Promise<void>;
+  download(options: { url: string; bytes?: number }): Promise<ApkDownloadResult>;
   install(): Promise<void>;
   addListener(
     eventName: 'progress',
