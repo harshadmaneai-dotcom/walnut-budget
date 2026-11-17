@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
 const REPO = 'harshadmaneai-dotcom/walnut-budget';
+const FEED_URL = 'https://walnut-budget.vercel.app/updates/latest.json';
 const TIMEOUT_MINUTES = Number(process.env.RELEASE_TIMEOUT_MINUTES ?? 35);
 
 function log(message) {
@@ -142,6 +143,24 @@ async function verifyPublished(version) {
   }
 }
 
+/**
+ * The app reads the website feed before it asks GitHub, because GitHub's API allows only 60
+ * unauthenticated requests per hour per IP. The workflow gates on this; the check here just
+ * reports a deploy that lagged behind the release instead of leaving it unexplained.
+ */
+async function siteFeedProblem(version) {
+  try {
+    const response = await fetch(`${FEED_URL}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) return `answered ${response.status}`;
+    const feed = await response.json();
+    if (feed.version !== version) return `still advertises ${feed.version}`;
+    if (!feed.sha256 || !(feed.bytes > 0)) return 'is missing its size or checksum';
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
@@ -188,6 +207,12 @@ async function main() {
 
   await waitForAssets(`v${next.text}`, next.text);
   await verifyPublished(next.text);
+
+  const feedProblem = await siteFeedProblem(next.text);
+  if (feedProblem) {
+    log(`warning: ${FEED_URL} ${feedProblem} — the site deploy has not caught up, so phones`);
+    log('  will fall back to GitHub until it does. Re-run the Release workflow once Vercel is green.');
+  }
 
   const code = `${next.major * 10000 + next.minor * 100 + next.patch}`;
   log(`released v${next.text} (APK versionCode ${code})`);

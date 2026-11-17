@@ -25,8 +25,16 @@ interface ApkUpdaterPlugin {
   /** Opens the system "install unknown apps" screen for Walnut. */
   openInstallSettings(): Promise<void>;
   /** Sources in order of preference; the plugin moves to the next one if a source fails. */
-  download(options: { urls?: string[]; url?: string; bytes?: number }): Promise<ApkDownloadResult>;
+  download(options: {
+    urls?: string[];
+    url?: string;
+    bytes?: number;
+    /** Published SHA-256; the plugin deletes a mismatch and tries the next source. */
+    sha256?: string;
+  }): Promise<ApkDownloadResult>;
   install(): Promise<void>;
+  /** Opens a download page in the system browser, for a build Android will not replace in place. */
+  openUrl(options: { url: string }): Promise<void>;
   addListener(
     eventName: 'progress',
     listener: (progress: ApkDownloadProgress) => void,

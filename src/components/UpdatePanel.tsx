@@ -94,7 +94,18 @@ function DesktopUpdate() {
 
 /** Android only: compares with the published release and installs it in place. */
 function AndroidUpdate() {
-  const { stage, update, percent, progressBytes, progressTotal, message, check, install } = useAndroidUpdate();
+  const {
+    stage,
+    update,
+    percent,
+    progressBytes,
+    progressTotal,
+    message,
+    check,
+    install,
+    openDownloadPage,
+    needsReinstall,
+  } = useAndroidUpdate();
   const busy = stage === 'downloading' || stage === 'installing';
 
   // Real numbers, so a slow release host reads as a slow download rather than a stuck one.
@@ -121,9 +132,15 @@ function AndroidUpdate() {
               ? `Downloading… ${percent}%`
               : stage === 'installing'
                 ? 'Opening installer…'
-                : `Install v${update.version}`}
+                : needsReinstall
+                  ? 'Open download page'
+                  : `Install v${update.version}`}
           </button>
         )}
+        {/* The escape hatch when the in-app check or download cannot finish on this network. */}
+        <button className="btn" onClick={() => void openDownloadPage()} disabled={busy}>
+          Download in browser
+        </button>
       </div>
       {stage === 'downloading' && (
         <div className="update-progress" aria-hidden="true" style={{ marginTop: 12 }}>
@@ -146,6 +163,10 @@ function AndroidUpdate() {
           this build.
         </p>
       )}
+      <p className="muted small" style={{ marginTop: 8 }}>
+        If checking or downloading here fails, <strong>Download in browser</strong> opens the APK
+        page on the website instead.
+      </p>
     </section>
   );
 }

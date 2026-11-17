@@ -134,6 +134,7 @@ function AndroidUpdateBanner() {
     message,
     check,
     install,
+    needsReinstall,
     dismissed,
     dismiss,
   } = useAndroidUpdate();
@@ -142,8 +143,28 @@ function AndroidUpdateBanner() {
     void check(false);
   }, [check]);
 
-  if (!update || dismissed) return null;
+  if (dismissed) return null;
   const busy = stage === 'downloading' || stage === 'installing';
+
+  // A failed check used to render nothing, so a blocked update looked like "already current".
+  // Say what happened and offer a retry, even when no update is known yet.
+  if (!update) {
+    if (stage !== 'error') return null;
+    return (
+      <div className="update-banner" role="status" aria-live="polite">
+        <div className="update-text">
+          <strong>Couldn&apos;t check for updates</strong>
+          <span>{message || 'Try again in a moment.'}</span>
+        </div>
+        <button className="btn small primary" onClick={() => void check(true)}>
+          Try again
+        </button>
+        <button className="update-dismiss" aria-label="Dismiss update notice" onClick={dismiss}>
+          ×
+        </button>
+      </div>
+    );
+  }
 
   const transfer =
     progressTotal > 0 ? `${formatMegabytes(progressBytes)} of ${formatMegabytes(progressTotal)}` : '';
@@ -157,7 +178,7 @@ function AndroidUpdateBanner() {
             ? message || (transfer ? `Downloading… ${percent}% · ${transfer}` : `Downloading… ${percent}%`)
             : stage === 'installing'
               ? 'Opening the installer…'
-              : `You are on v${APP_VERSION}.`}
+              : message || `You are on v${APP_VERSION}.`}
         </span>
       </div>
       {stage === 'downloading' ? (
@@ -166,7 +187,7 @@ function AndroidUpdateBanner() {
         </div>
       ) : (
         <button className="btn small primary" onClick={() => void install()} disabled={busy}>
-          Install update
+          {needsReinstall ? 'Open download page' : 'Install update'}
         </button>
       )}
       {!busy && (

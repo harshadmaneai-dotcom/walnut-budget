@@ -110,6 +110,14 @@ jobs:
             exit 1
           fi
 
+          # The website mirror lives in public/updates so Vercel can serve it. It must never be
+          # copied into the app bundle: a nested APK doubles the download and looks like a
+          # packed payload to Play Protect, which is how a good build starts failing to install.
+          if unzip -l "$APK" | grep -qE 'assets/public/updates/.*\.apk'; then
+            echo "::error::the APK bundles a nested copy of the update mirror"
+            exit 1
+          fi
+
           VERIFY=$("$BUILD_TOOLS"/apksigner verify --print-certs --verbose "$APK")
           echo "$VERIFY" | grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' \
             || { echo "::error::APK is not signed with the v2 scheme"; exit 1; }
@@ -216,6 +224,9 @@ jobs:
             Walnut ${{ steps.v.outputs.version }}.
 
             Windows and Android install it themselves: **Check for updates** in Settings.
+
+            If that check reports an error, download the APK from
+            https://walnut-budget.vercel.app and install it once over this build.
           # Exactly one workflow may own this flag; both updaters read the latest release.
           make_latest: true
           files: |
@@ -251,15 +262,34 @@ jobs:
           echo "Release v$VERSION is live for desktop and Android."
 
       # The APK is mirrored beside the website so phones download it from the same fast host
-      # instead of GitHub's release storage, which crawls on some networks. The version in the
-      # filename means a stale mirror can never be mistaken for the current build.
-      - name: Mirror the APK for in-app updates
+      # instead of GitHub's release storage, which crawls on some networks. `latest.json` is
+      # the feed the app reads first: a static file on a host users already reach, so version
+      # discovery no longer depends on GitHub's API (60 requests per hour per IP, shared by
+      # everyone behind a carrier NAT). The checksum lets the app reject a bad download.
+      - name: Mirror the APK and publish the update manifest
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
         run: |
           set -euo pipefail
-          VERSION="${{ steps.v.outputs.version }}"
           mkdir -p public/updates
-          rm -f public/updates/Walnut-*.apk
+          rm -f public/updates/Walnut-*.apk public/updates/Walnut.apk public/updates/latest.json
           cp artifacts/android/Walnut.apk "public/updates/Walnut-$VERSION.apk"
+          # A stable name for manual installs and the website's download button. Same bytes,
+          # same git blob, so it costs nothing to keep both names.
+          cp artifacts/android/Walnut.apk public/updates/Walnut.apk
+          node -e '
+            const fs = require("fs");
+            const crypto = require("crypto");
+            const bytes = fs.readFileSync("artifacts/android/Walnut.apk");
+            const manifest = {
+              version: process.env.VERSION,
+              apk: `Walnut-${process.env.VERSION}.apk`,
+              bytes: bytes.length,
+              sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
+            };
+            fs.writeFileSync("public/updates/latest.json", JSON.stringify(manifest, null, 2) + "\n");
+            console.log(manifest);
+          '
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add public/updates
@@ -274,3 +304,40 @@ jobs:
       - name: Deploy the website
         if: env.VERCEL_DEPLOY_HOOK != ''
         run: curl -fsS -X POST "$VERCEL_DEPLOY_HOOK" > /dev/null
+
+      # A release is not finished until the feed the app reads advertises it. Without this,
+      # phones fall back to the rate-limited GitHub API and some of them see nothing at all.
+      - name: Verify the in-app update feed
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          set -euo pipefail
+          FEED="https://walnut-budget.vercel.app/updates/latest.json"
+          READY=0
+          # Vercel build + upload can take a few minutes for a fresh mirror; 8 minutes is generous.
+          for i in $(seq 1 80); do
+            if curl -fsS "$FEED?t=$(date +%s)" -o /tmp/walnut-latest.json; then
+              if node -e '
+                const fs = require("fs");
+                const feed = JSON.parse(fs.readFileSync("/tmp/walnut-latest.json", "utf8"));
+                process.exit(feed.version === process.env.VERSION && feed.sha256 && feed.bytes > 0 ? 0 : 1);
+              '; then
+                READY=1
+                break
+              fi
+            fi
+            echo "waiting for the website feed to advertise $VERSION …"
+            sleep 6
+          done
+          if [ "$READY" != "1" ]; then
+            echo "::error::the website update feed does not advertise $VERSION."
+            echo "The release is published, but in-app discovery would fall back to the rate-limited GitHub API."
+            echo "Deploy the site (Vercel project budget-tracker) or set VERCEL_DEPLOY_HOOK, then re-run this job."
+            exit 1
+          fi
+          APK=$(node -p 'require("/tmp/walnut-latest.json").apk')
+          for ASSET in "$APK" "Walnut.apk"; do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' -L "https://walnut-budget.vercel.app/updates/$ASSET")
+            [ "$CODE" = "200" ] || { echo "::error::the mirrored APK /updates/$ASSET answered $CODE"; exit 1; }
+          done
+          echo "The app feed advertises $VERSION at /updates/$APK (stable name: /updates/Walnut.apk)."

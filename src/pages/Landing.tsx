@@ -1,6 +1,6 @@
 import { Icon, type IconName } from '../components/Icon';
 import { Logo } from '../components/Logo';
-import { ANDROID_DOWNLOAD_URL, DESKTOP_DOWNLOAD_URL } from '../lib/downloads';
+import { ANDROID_MIRROR_URL, DESKTOP_DOWNLOAD_URL } from '../lib/downloads';
 import { APP_VERSION } from '../lib/version';
 
 interface LandingProps {
@@ -58,7 +58,8 @@ export function Landing({ signedIn, onSignIn, onCreate, onOpenBudget }: LandingP
               <button className="btn primary" onClick={onOpenBudget}>Open my budget</button>
             )}
             {/* Signing in and creating an account stay in the top-right nav. */}
-            <a className="btn primary" href={ANDROID_DOWNLOAD_URL} download>
+            {/* Served from this site, so a phone whose network blocks GitHub can still install. */}
+            <a className="btn primary" href={ANDROID_MIRROR_URL} download>
               Download mobile app
             </a>
           </div>
@@ -116,14 +117,14 @@ export function Landing({ signedIn, onSignIn, onCreate, onOpenBudget }: LandingP
         <div className="landing-cta">
           <a
             className="btn primary"
-            href={isAndroid ? ANDROID_DOWNLOAD_URL : DESKTOP_DOWNLOAD_URL}
+            href={isAndroid ? ANDROID_MIRROR_URL : DESKTOP_DOWNLOAD_URL}
             {...(isAndroid ? { download: true } : { target: '_blank', rel: 'noopener noreferrer' })}
           >
             Download for {isAndroid ? 'Android' : 'Windows'}
           </a>
           <a
             className="btn"
-            href={isAndroid ? DESKTOP_DOWNLOAD_URL : ANDROID_DOWNLOAD_URL}
+            href={isAndroid ? DESKTOP_DOWNLOAD_URL : ANDROID_MIRROR_URL}
             {...(isAndroid ? { target: '_blank', rel: 'noopener noreferrer' } : { download: true })}
           >
             {isAndroid ? 'Windows version' : 'Android app (APK)'}
