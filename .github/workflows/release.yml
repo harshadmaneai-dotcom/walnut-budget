@@ -239,27 +239,33 @@ jobs:
           fail_on_unmatched_files: true
 
       # Assert what users will actually download, not what we hoped we uploaded.
+      # The asset CDN and the releases API lag a fresh upload by a few seconds, and a single
+      # early look used to fail this step after a good publish — which skipped the mirror and
+      # the website deploy, so phones silently fell back to the rate-limited GitHub API. All
+      # three answers are now checked together, with retries, before this step fails.
       - name: Verify the published release
         run: |
           set -euo pipefail
           REPO="${{ github.repository }}"
           VERSION="${{ steps.v.outputs.version }}"
-          for i in $(seq 1 30); do
-            CODE=$(curl -s -o /dev/null -w '%{http_code}' -L "https://github.com/$REPO/releases/download/v$VERSION/Walnut.apk")
-            [ "$CODE" = "200" ] && break
-            echo "waiting for the APK asset ($CODE) …"
-            sleep 6
+          APK_CODE="000"
+          TAG=""
+          for i in $(seq 1 20); do
+            APK_CODE=$(curl -s -o /dev/null -w '%{http_code}' -L "https://github.com/$REPO/releases/download/v$VERSION/Walnut.apk")
+            YML=$(curl -sL "https://github.com/$REPO/releases/latest/download/latest.yml" || true)
+            TAG=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" \
+              | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).tag_name)}catch{console.log('')}})")
+
+            if [ "$APK_CODE" = "200" ] && printf '%s' "$YML" | grep -q "version: $VERSION" && [ "$TAG" = "v$VERSION" ]; then
+              echo "Release v$VERSION is live for desktop and Android."
+              exit 0
+            fi
+
+            echo "waiting for release metadata (apk=$APK_CODE, latest=$TAG) …"
+            sleep 10
           done
-          [ "$CODE" = "200" ] || { echo "::error::the APK asset is not downloadable"; exit 1; }
-
-          curl -sL "https://github.com/$REPO/releases/latest/download/latest.yml" | grep -q "version: $VERSION" \
-            || { echo "::error::latest.yml does not advertise $VERSION"; exit 1; }
-
-          TAG=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" \
-            | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).tag_name))")
-          [ "$TAG" = "v$VERSION" ] || { echo "::error::latest release is $TAG, expected v$VERSION"; exit 1; }
-
-          echo "Release v$VERSION is live for desktop and Android."
+          echo "::error::the published release does not advertise v$VERSION (apk=$APK_CODE, latest=$TAG)"
+          exit 1
 
       # The APK is mirrored beside the website so phones download it from the same fast host
       # instead of GitHub's release storage, which crawls on some networks. `latest.json` is
