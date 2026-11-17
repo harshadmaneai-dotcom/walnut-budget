@@ -77,15 +77,22 @@ function fakeResponse(status: number, body: unknown) {
   } as Response;
 }
 
+/**
+ * A build that is always newer than the bundle under test. Hard-coding the current release
+ * made these tests fail as soon as package.json reached that version, because an equal
+ * version is correctly reported as "no update".
+ */
+const NEWER = '9.9.9';
+
 const manifest = {
-  version: '2.0.21',
-  apk: 'Walnut-2.0.21.apk',
+  version: NEWER,
+  apk: `Walnut-${NEWER}.apk`,
   bytes: 3_420_231,
   sha256: 'b'.repeat(64),
 };
 
 const release = {
-  tag_name: 'v2.0.21',
+  tag_name: `v${NEWER}`,
   body: 'Release notes',
   draft: false,
   prerelease: false,
@@ -120,10 +127,10 @@ describe('checkForAndroidUpdate', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const update = await checkForAndroidUpdate({ force: true });
-    expect(update?.version).toBe('2.0.21');
+    expect(update?.version).toBe(NEWER);
     expect(update?.sha256).toBe('b'.repeat(64));
     expect(update?.bytes).toBe(3_420_231);
-    expect(update?.urls[0]).toBe(`${mirrorApkUrl('2.0.21')}`);
+    expect(update?.urls[0]).toBe(`${mirrorApkUrl(NEWER)}`);
     expect(fetchMock.mock.calls.map(([url]) => String(url)).some((url) => url.includes('api.github.com'))).toBe(
       true,
     );
@@ -140,8 +147,8 @@ describe('checkForAndroidUpdate', () => {
     );
 
     const update = await checkForAndroidUpdate({ force: true });
-    expect(update?.version).toBe('2.0.21');
-    expect(update?.urls[0]).toBe(mirrorApkUrl('2.0.21'));
+    expect(update?.version).toBe(NEWER);
+    expect(update?.urls[0]).toBe(mirrorApkUrl(NEWER));
     expect(update?.urls[1]).toContain('releases/latest/download/Walnut.apk');
   });
 
@@ -156,9 +163,9 @@ describe('checkForAndroidUpdate', () => {
     );
 
     const update = await checkForAndroidUpdate({ force: true });
-    expect(update?.version).toBe('2.0.21');
+    expect(update?.version).toBe(NEWER);
     expect(update?.sha256).toBe('');
-    expect(update?.urls[0]).toBe(mirrorApkUrl('2.0.21'));
+    expect(update?.urls[0]).toBe(mirrorApkUrl(NEWER));
     expect(update?.urls[1]).toBe('https://example.test/Walnut.apk');
   });
 

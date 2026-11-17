@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Store } from '../store';
 import {
+  SNAPSHOT_LIMIT,
   defaultData,
   listSnapshots,
   loadSnapshot,
@@ -20,7 +21,21 @@ import { authErrorMessage, useAuth } from '../lib/auth';
 import { Logo } from '../components/Logo';
 import { replayTour } from '../components/Tour';
 import { UpdatePanel } from '../components/UpdatePanel';
+import { Icon } from '../components/Icon';
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from '../lib/theme';
+
+/** Date and time are printed separately so the date stays the strongest line on the card. */
+function snapshotDay(at: string): string {
+  return new Date(at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function snapshotTime(at: string): string {
+  return new Date(at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function countLabel(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
 
 export function Settings({ store }: { store: Store }) {
   const { data, update, replaceAll } = store;
@@ -201,32 +216,49 @@ export function Settings({ store }: { store: Store }) {
           {importError && <p className="error" style={{ marginTop: 12 }}>{importError}</p>}
         </section>
 
-        <section className="card col-6">
+        <section className="card col-6 recovery-card">
           <div className="card-head">
             <div><h2>Recovery</h2><p>Local copies kept before a cloud update</p></div>
+            {snapshots.length > 0 && (
+              <span className="chip">{snapshots.length} of {SNAPSHOT_LIMIT} kept</span>
+            )}
           </div>
           {snapshots.length === 0 ? (
-            <p className="muted small" style={{ margin: 0 }}>
-              No local copies yet. Walnut keeps the last five automatically before replacing this
-              device&apos;s data with a cloud copy.
-            </p>
+            <div className="recovery-empty">
+              <Icon name="check" size={17} />
+              <span>
+                Nothing to recover yet. Walnut keeps the last {SNAPSHOT_LIMIT} copies on this device
+                automatically, right before a cloud copy replaces its data.
+              </span>
+            </div>
           ) : (
-            <div className="snapshot-list">
-              {snapshots.map((snapshot) => (
-                <div className="snapshot-row" key={snapshot.id}>
+            <ul className="snapshot-list">
+              {snapshots.map((snapshot, index) => (
+                <li className="snapshot-row" key={snapshot.id}>
                   <div className="snapshot-text">
-                    <strong>{new Date(snapshot.at).toLocaleString()}</strong>
-                    <span>
-                      {snapshot.transactions} transactions · {snapshot.transfers} transfers ·{' '}
-                      {snapshot.loans} loans
-                    </span>
+                    <div className="snapshot-when">
+                      <strong>{snapshotDay(snapshot.at)}</strong>
+                      <span>{snapshotTime(snapshot.at)}</span>
+                      {index === 0 && <span className="badge up">Newest</span>}
+                    </div>
+                    <div className="snapshot-meta">
+                      <span>{countLabel(snapshot.transactions, 'transaction')}</span>
+                      <span>{countLabel(snapshot.transfers, 'transfer')}</span>
+                      <span>{countLabel(snapshot.loans, 'loan')}</span>
+                      {snapshot.recurring > 0 && (
+                        <span>{countLabel(snapshot.recurring, 'recurring entry')}</span>
+                      )}
+                    </div>
                   </div>
-                  <button className="btn small" onClick={() => void restoreSnapshot(snapshot)}>
+                  <button
+                    className="btn small snapshot-restore"
+                    onClick={() => void restoreSnapshot(snapshot)}
+                  >
                     Restore
                   </button>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </section>
 

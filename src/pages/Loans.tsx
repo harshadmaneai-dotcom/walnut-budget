@@ -204,7 +204,8 @@ export function Loans({ store }: { store: Store }) {
           <span className={`badge ${tone}`}>{label}</span>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {/* Same pill, same height for every action, so the row reads as one control strip. */}
+        <div className="favor-toolbar">
           <button
             className="btn small primary"
             onClick={() => setLogging({ person, direction: 'theyCovered' })}
@@ -220,7 +221,13 @@ export function Loans({ store }: { store: Store }) {
           <button className="btn small" onClick={() => setRenaming(person)}>
             <Icon name="pencil" size={14} /> Rename
           </button>
-          <button className="btn small danger" onClick={() => removePerson(person)}>Delete</button>
+          <button
+            className="btn small danger"
+            aria-label={`Delete ${person.name}`}
+            onClick={() => removePerson(person)}
+          >
+            <Icon name="trash" size={14} /> Delete
+          </button>
         </div>
 
         {entries.length > 0 && (
@@ -230,27 +237,32 @@ export function Loans({ store }: { store: Store }) {
                 {entries.map((entry) => (
                   <tr key={entry.id}>
                     <td className="favor-date">{formatDate(entry.date)}</td>
-                    <td className="muted">
+                    <td className="favor-note muted">
                       {entry.note || (entry.direction === 'theyCovered' ? 'They paid for me' : 'I paid for them')}
                     </td>
-                    <td className={`num ${entry.direction === 'theyCovered' ? 'neg' : 'pos'}`}>
+                    <td className={`num favor-amount ${entry.direction === 'theyCovered' ? 'neg' : 'pos'}`}>
                       {entry.direction === 'theyCovered' ? '+' : '−'}{formatMoney(entry.amount, cur)}
                     </td>
+                    {/* Icon buttons are inline-flex: as grid blocks they stacked into two rows. */}
                     <td className="favor-actions">
-                      <button
-                        className="icon-btn"
-                        aria-label="Edit entry"
-                        onClick={() => setEditingFavor(entry)}
-                      >
-                        <Icon name="pencil" size={15} />
-                      </button>
-                      <button
-                        className="icon-btn danger"
-                        aria-label="Delete entry"
-                        onClick={() => void removeFavor(entry)}
-                      >
-                        <Icon name="trash" size={15} />
-                      </button>
+                      <div className="favor-row-actions">
+                        <button
+                          className="icon-btn"
+                          aria-label="Edit entry"
+                          title="Edit entry"
+                          onClick={() => setEditingFavor(entry)}
+                        >
+                          <Icon name="pencil" size={15} />
+                        </button>
+                        <button
+                          className="icon-btn danger"
+                          aria-label="Delete entry"
+                          title="Delete entry"
+                          onClick={() => void removeFavor(entry)}
+                        >
+                          <Icon name="trash" size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

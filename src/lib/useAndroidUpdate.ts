@@ -13,8 +13,10 @@ export interface AndroidUpdater {
   progressBytes: number;
   progressTotal: number;
   message: string;
-  check: (force?: boolean) => Promise<void>;
+  check: (force?: boolean) => Promise<AvailableUpdate | null>;
   install: () => Promise<void>;
+  /** One action for the whole flow: check if needed, then download and install. */
+  updateNow: () => Promise<void>;
   /** Opens the download page in the system browser, the manual path around a blocked update. */
   openDownloadPage: () => Promise<void>;
   /** True when Android refused the APK because this install was signed with another key. */
@@ -78,8 +80,8 @@ export function useAndroidUpdate(): AndroidUpdater {
     [],
   );
 
-  const check = useCallback(async (force = false) => {
-    if (busy.current) return;
+  const check = useCallback(async (force = false): Promise<AvailableUpdate | null> => {
+    if (busy.current) return null;
     busy.current = true;
     setStage('checking');
     setMessage('');
@@ -90,10 +92,12 @@ export function useAndroidUpdate(): AndroidUpdater {
       setNeedsReinstall(false);
       setStage('idle');
       if (!found && force) setMessage("You're on the latest version.");
+      return found;
     } catch (error) {
       setStage('error');
       const detail = error instanceof UpdateCheckError ? error.message : 'unknown error';
       setMessage(`Couldn't check for updates (${detail}).`);
+      return null;
     } finally {
       busy.current = false;
     }
@@ -208,43 +212,64 @@ export function useAndroidUpdate(): AndroidUpdater {
     [openInstaller],
   );
 
-  const install = useCallback(async () => {
-    if (!update || starting.current) return;
+  /** Downloads and installs one known build. Shared by the explicit, the one-tap and the
+   *  reinstall paths so all three behave the same. */
+  const installTarget = useCallback(
+    async (target: AvailableUpdate, reinstall: boolean) => {
+      if (starting.current) return;
 
-    // Builds without the plugin can still update, just through the browser. The last candidate
-    // is GitHub's stable link, which works without the mirror being deployed.
-    if (!apkUpdaterAvailable()) {
-      window.location.href = update.urls[update.urls.length - 1];
-      return;
-    }
-
-    // Android will never replace an install signed with a different key. Sending the user to
-    // the same installer again cannot work, so hand them the one-time manual path instead.
-    if (needsReinstall) {
-      setMessage('Opening the download page in your browser…');
-      await openDownloadPage();
-      return;
-    }
-
-    starting.current = true;
-    try {
-      const { allowed } = await ApkUpdater.canInstall();
-      if (!allowed) {
-        await ApkUpdater.openInstallSettings();
-        setStage('error');
-        setMessage('Allow Walnut to install apps, then press Install again.');
+      // Builds without the plugin can still update, just through the browser. The last candidate
+      // is GitHub's stable link, which works without the mirror being deployed.
+      if (!apkUpdaterAvailable()) {
+        window.location.href = target.urls[target.urls.length - 1];
         return;
       }
 
-      await startDownload(update);
-    } catch {
-      setStage('error');
-      setMessage("Couldn't start the update. Try again.");
-    } finally {
-      // The transfer keeps running natively; this only releases the setup guard.
-      starting.current = false;
-    }
-  }, [update, needsReinstall, openDownloadPage, startDownload]);
+      // Android will never replace an install signed with a different key. Sending the user to
+      // the same installer again cannot work, so hand them the one-time manual path instead.
+      if (reinstall) {
+        setMessage('Opening the download page in your browser…');
+        await openDownloadPage();
+        return;
+      }
+
+      starting.current = true;
+      try {
+        const { allowed } = await ApkUpdater.canInstall();
+        if (!allowed) {
+          await ApkUpdater.openInstallSettings();
+          setStage('error');
+          setMessage('Allow Walnut to install apps, then press Install again.');
+          return;
+        }
+
+        await startDownload(target);
+      } catch {
+        setStage('error');
+        setMessage("Couldn't start the update. Try again.");
+      } finally {
+        // The transfer keeps running natively; this only releases the setup guard.
+        starting.current = false;
+      }
+    },
+    [openDownloadPage, startDownload],
+  );
+
+  const install = useCallback(async () => {
+    if (!update) return;
+    await installTarget(update, needsReinstall);
+  }, [update, needsReinstall, installTarget]);
+
+  /**
+   * The one button in Settings: ask the feed only when nothing is known yet, then download and
+   * hand the APK to Android's installer. Pressing it during a transfer does nothing.
+   */
+  const updateNow = useCallback(async () => {
+    if (stageRef.current === 'downloading' || stageRef.current === 'installing') return;
+    const target = update ?? (await check(true));
+    if (!target) return;
+    await installTarget(target, needsReinstall);
+  }, [update, needsReinstall, check, installTarget]);
 
   // Android may freeze or recreate the WebView while DownloadManager keeps working. When the
   // app comes back, re-attach and resume instead of leaving the bar frozen at the last value.
@@ -270,6 +295,7 @@ export function useAndroidUpdate(): AndroidUpdater {
     message,
     check,
     install,
+    updateNow,
     openDownloadPage,
     needsReinstall,
     dismissed,

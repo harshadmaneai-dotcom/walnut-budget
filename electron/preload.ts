@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('walnut', {
   checkForUpdates: () => ipcRenderer.invoke('walnut:check') as Promise<void>,
   downloadUpdate: () => ipcRenderer.invoke('walnut:download') as Promise<void>,
   installUpdate: () => ipcRenderer.invoke('walnut:install') as Promise<void>,
+  /** Check, download and install in one call, whichever step is still missing. */
+  updateNow: () => ipcRenderer.invoke('walnut:update') as Promise<void>,
   onUpdate: (callback: (state: UpdateState) => void) => {
     const handler = (_event: unknown, state: UpdateState) => callback(state);
     ipcRenderer.on('walnut:update', handler);

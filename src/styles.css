@@ -315,13 +315,22 @@ tbody tr:last-child td { border-bottom: none; }
 .bal-row strong { color: var(--text); font-weight: 600; white-space: nowrap; }
 
 /* Favor cards reuse the repayment layout, with the date held on one line. */
-.favor-table .favor-date { white-space: nowrap; font-size: 13px; color: var(--muted); }
-.favor-table td { padding: 9px 6px; }
+.favor-table .favor-date { white-space: nowrap; font-size: 13px; color: var(--muted); width: 96px; }
+.favor-table td { padding: 9px 6px; vertical-align: middle; }
 .favor-table .num { white-space: nowrap; }
-.favor-table .favor-actions { width: 76px; white-space: nowrap; text-align: right; }
-.favor-table .favor-actions .icon-btn { width: 30px; height: 30px; }
-.favor-table .favor-actions .icon-btn + .icon-btn { margin-left: 4px; }
+.favor-table .favor-note { overflow-wrap: anywhere; }
+.favor-table .favor-amount { width: 104px; text-align: right; font-variant-numeric: tabular-nums; }
+.favor-table .favor-actions { width: 1%; white-space: nowrap; text-align: right; padding-left: 10px; }
+/* Inline flex, not grid: two .icon-btn blocks in a table cell would stack on separate rows. */
+.favor-row-actions { display: inline-flex; align-items: center; gap: 6px; }
+.favor-table .favor-actions .icon-btn { width: 30px; height: 30px; border-radius: 9px; }
+.favor-table .favor-actions .icon-btn + .icon-btn { margin-left: 0; }
 .favor-foot { margin: 12px 0 0; }
+/* The card's actions share one pill shape and one height, including the quiet Delete. */
+.favor-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.favor-toolbar .btn { min-height: 34px; padding: 7px 14px; }
+.favor-toolbar .btn.danger { border-color: var(--border); }
+.favor-toolbar .btn.danger:hover { border-color: transparent; }
 input[readonly] { background: #f4f7ec; color: var(--muted); }
 [data-theme="dark"] input[readonly] { background: #101b17; }
 
@@ -1014,6 +1023,40 @@ textarea:focus-visible {
 .update-dismiss:hover { background: var(--green-soft); color: var(--green-dark); }
 @media (max-width: 560px) {
   .update-banner { left: 12px; right: 12px; bottom: 88px; max-width: none; }
+}
+
+/* ---------- Recovery snapshots ---------- */
+.recovery-empty {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 14px 15px; border-radius: 16px; border: 1px dashed var(--border);
+  background: #fbfcf8; color: var(--muted); font-size: 13px; line-height: 1.55;
+}
+.recovery-empty svg { color: var(--green); flex-shrink: 0; margin-top: 1px; }
+[data-theme="dark"] .recovery-empty { background: #14211c; }
+
+.snapshot-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.snapshot-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 13px; border: 1px solid var(--border); border-radius: 16px;
+  background: #fafbf5; transition: border-color .15s ease, background .15s ease;
+}
+.snapshot-row:hover { border-color: #cfd9c6; background: #f7faf1; }
+[data-theme="dark"] .snapshot-row { background: #1b2b25; }
+[data-theme="dark"] .snapshot-row:hover { background: #203229; border-color: #3d5249; }
+.snapshot-text { min-width: 0; }
+.snapshot-when { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 14px; }
+.snapshot-when strong { font-weight: 600; }
+.snapshot-when > span:not(.badge) { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.snapshot-meta {
+  display: flex; flex-wrap: wrap; gap: 2px 7px; margin-top: 3px;
+  font-size: 12px; color: var(--muted);
+}
+.snapshot-meta span + span::before { content: '·'; margin-right: 7px; opacity: .7; }
+.snapshot-restore { flex-shrink: 0; }
+
+@media (max-width: 420px) {
+  .snapshot-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .snapshot-restore { width: 100%; }
 }
 
 .landing-fineprint { font-size: 13px; line-height: 1.5; margin-top: 8px; max-width: 46ch; }

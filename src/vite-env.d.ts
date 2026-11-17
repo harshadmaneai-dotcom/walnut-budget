@@ -17,6 +17,8 @@ interface WalnutBridge {
   checkForUpdates(): Promise<void>;
   downloadUpdate(): Promise<void>;
   installUpdate(): Promise<void>;
+  /** Check, download and install in one call, whichever step is still missing. */
+  updateNow(): Promise<void>;
   onUpdate(callback: (state: WalnutUpdateState) => void): () => void;
 }
 

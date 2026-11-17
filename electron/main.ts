@@ -17,6 +17,13 @@ type UpdateState =
 
 let updateStartupTimer: ReturnType<typeof setTimeout> | null = null;
 let updateIntervalTimer: ReturnType<typeof setInterval> | null = null;
+/** Latest state pushed to the renderer, so one button can act on where the flow already is. */
+let lastState: UpdateState | null = null;
+
+/** Read through a call: the broadcaster above replaces the value behind TypeScript's view. */
+function latestState(): UpdateState | null {
+  return lastState;
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -61,9 +68,22 @@ function createWindow() {
 }
 
 function broadcast(state: UpdateState) {
+  lastState = state;
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win.isDestroyed()) win.webContents.send('walnut:update', state);
   }
+}
+
+/** Restart into the downloaded installer. The NSIS include force-closes a main process that
+ *  hangs, so this does not leave a windowless process behind. */
+function installDownloaded() {
+  setImmediate(() => {
+    try {
+      autoUpdater.quitAndInstall(false, true);
+    } catch (error) {
+      broadcast({ status: 'error', message: error instanceof Error ? error.message : String(error) });
+    }
+  });
 }
 
 /**
@@ -75,6 +95,7 @@ function setupUpdates() {
 
   ipcMain.handle('walnut:check', async () => {
     if (isDev) return;
+    lastState = null;
     try {
       await autoUpdater.checkForUpdates();
     } catch (error) {
@@ -93,15 +114,35 @@ function setupUpdates() {
 
   ipcMain.handle('walnut:install', () => {
     if (isDev) return;
-    setImmediate(() => {
-      try {
-        // Restart the app after the installer finishes. The NSIS include force-closes a
-        // main process that hangs, so this does not leave a windowless process behind.
-        autoUpdater.quitAndInstall(false, true);
-      } catch (error) {
-        broadcast({ status: 'error', message: error instanceof Error ? error.message : String(error) });
+    installDownloaded();
+  });
+
+  /**
+   * The single "Update now" action: check when nothing is known yet, download a newer build,
+   * and install one that is already downloaded. The renderer does not have to know which step
+   * comes next, so one button covers the whole flow.
+   */
+  ipcMain.handle('walnut:update', async () => {
+    if (isDev) return;
+    try {
+      if (lastState?.status === 'downloaded') {
+        installDownloaded();
+        return;
       }
-    });
+      if (lastState?.status === 'available') {
+        await autoUpdater.downloadUpdate();
+        return;
+      }
+      // Already transferring: pressing again must not restart it.
+      if (lastState?.status === 'downloading') return;
+
+      lastState = null;
+      await autoUpdater.checkForUpdates();
+      // 'update-available' has fired by now, so this reads the answer from this check.
+      if (latestState()?.status === 'available') await autoUpdater.downloadUpdate();
+    } catch (error) {
+      broadcast({ status: 'error', message: error instanceof Error ? error.message : String(error) });
+    }
   });
 
   if (isDev) return;

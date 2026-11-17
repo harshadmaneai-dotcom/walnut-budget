@@ -9,6 +9,9 @@ import { useAndroidUpdate } from '../lib/useAndroidUpdate';
  *  - the Electron build has a bridge, so it can check, download and install in place;
  *  - the Android shell downloads the APK itself and hands it to the system installer;
  *  - the plain website renders nothing.
+ *
+ * Each mode has one primary button. It checks only when nothing is known yet, then downloads,
+ * then installs, so the user never has to find a second button to finish an update.
  */
 export function UpdatePanel() {
   if (window.walnut) return <DesktopUpdate />;
@@ -16,11 +19,11 @@ export function UpdatePanel() {
   return null;
 }
 
-/** Desktop only: shows the installed build and checks GitHub Releases on demand. */
+/** Desktop only: one button checks, downloads and installs. */
 function DesktopUpdate() {
   const [current, setCurrent] = useState('');
   const [state, setState] = useState<WalnutUpdateState | null>(null);
-  const [checking, setChecking] = useState(false);
+  const [working, setWorking] = useState(false);
 
   useEffect(() => {
     const bridge = window.walnut;
@@ -29,13 +32,36 @@ function DesktopUpdate() {
     return bridge.onUpdate(setState);
   }, []);
 
-  function check() {
+  const downloading = state?.status === 'downloading';
+  const downloaded = state?.status === 'downloaded';
+  const available = state?.status === 'available' ? state.version : '';
+  const percent = state?.status === 'downloading' ? state.percent : 0;
+  const busy = working || downloading;
+
+  async function run() {
     const bridge = window.walnut;
-    if (!bridge || checking) return;
-    setChecking(true);
-    setState(null);
-    void bridge.checkForUpdates().finally(() => setChecking(false));
+    if (!bridge || busy) return;
+    if (downloaded) {
+      await bridge.installUpdate();
+      return;
+    }
+    setWorking(true);
+    try {
+      await bridge.updateNow();
+    } finally {
+      setWorking(false);
+    }
   }
+
+  const label = downloaded
+    ? 'Restart & install'
+    : downloading
+      ? `Downloading… ${percent}%`
+      : working
+        ? 'Checking…'
+        : available
+          ? `Update to v${available}`
+          : 'Update now';
 
   const status =
     state?.status === 'none'
@@ -43,9 +69,9 @@ function DesktopUpdate() {
       : state?.status === 'available'
         ? `Walnut ${state.version} is available.`
         : state?.status === 'downloaded'
-          ? `Walnut ${state.version} is ready to install.`
+          ? `Walnut ${state.version} is downloaded. It installs when Walnut restarts.`
           : state?.status === 'downloading'
-            ? `Downloading… ${state.percent}%`
+            ? `Downloading… ${percent}%`
             : state?.status === 'error'
               ? state.message
               : '';
@@ -57,30 +83,16 @@ function DesktopUpdate() {
           <h2>Desktop app</h2>
           <p>{current ? `Installed build v${current}` : 'Reading the installed build'}</p>
         </div>
+        {(available || downloaded) && <span className="chip">Update ready</span>}
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button className="btn" onClick={check} disabled={checking || state?.status === 'downloading'}>
-          {checking ? 'Checking…' : 'Check for updates'}
+        <button className="btn primary" onClick={() => void run()} disabled={busy}>
+          {label}
         </button>
-        {state?.status === 'available' && (
-          <button className="btn primary" onClick={() => void window.walnut?.downloadUpdate()}>
-            Install v{state.version}
-          </button>
-        )}
-        {state?.status === 'downloaded' && (
-          <button className="btn primary" onClick={() => void window.walnut?.installUpdate()}>
-            Close &amp; install
-          </button>
-        )}
       </div>
-      {state?.status === 'downloaded' && (
-        <p className="muted small" style={{ marginTop: 12 }}>
-          Walnut will close and reopen to finish installing.
-        </p>
-      )}
-      {state?.status === 'downloading' && (
+      {downloading && (
         <div className="update-progress" aria-hidden="true" style={{ marginTop: 12 }}>
-          <span style={{ width: `${state.percent}%` }} />
+          <span style={{ width: `${percent}%` }} />
         </div>
       )}
       {status && (
@@ -92,7 +104,7 @@ function DesktopUpdate() {
   );
 }
 
-/** Android only: compares with the published release and installs it in place. */
+/** Android only: the same single action, finished by Android's own install confirmation. */
 function AndroidUpdate() {
   const {
     stage,
@@ -101,18 +113,30 @@ function AndroidUpdate() {
     progressBytes,
     progressTotal,
     message,
-    check,
-    install,
+    updateNow,
     openDownloadPage,
-    needsReinstall,
   } = useAndroidUpdate();
   const busy = stage === 'downloading' || stage === 'installing';
 
   // Real numbers, so a slow release host reads as a slow download rather than a stuck one.
   const transfer =
     progressTotal > 0 ? `${formatMegabytes(progressBytes)} of ${formatMegabytes(progressTotal)}` : '';
+
+  const label =
+    stage === 'checking'
+      ? 'Checking…'
+      : stage === 'installing'
+        ? 'Opening installer…'
+        : stage === 'downloading'
+          ? `Downloading… ${percent}%`
+          : update
+            ? `Update to v${update.version}`
+            : 'Update now';
+
   const status =
-    message || (stage === 'downloading' && transfer ? `Downloading… ${percent}% · ${transfer}` : '');
+    message ||
+    (stage === 'downloading' && transfer ? transfer : '') ||
+    (update ? 'Android shows its own Install confirmation once the download finishes.' : '');
 
   return (
     <section className="card col-6">
@@ -121,22 +145,12 @@ function AndroidUpdate() {
           <h2>Android app</h2>
           <p>Installed build v{APP_VERSION}</p>
         </div>
+        {update && <span className="chip">Update ready</span>}
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button className="btn" onClick={() => void check(true)} disabled={stage === 'checking' || busy}>
-          {stage === 'checking' ? 'Checking…' : 'Check for updates'}
+        <button className="btn primary" onClick={() => void updateNow()} disabled={busy}>
+          {label}
         </button>
-        {update && (
-          <button className="btn primary" onClick={() => void install()} disabled={busy}>
-            {stage === 'downloading'
-              ? `Downloading… ${percent}%`
-              : stage === 'installing'
-                ? 'Opening installer…'
-                : needsReinstall
-                  ? 'Open download page'
-                  : `Install v${update.version}`}
-          </button>
-        )}
         {/* The escape hatch when the in-app check or download cannot finish on this network. */}
         <button className="btn" onClick={() => void openDownloadPage()} disabled={busy}>
           Download in browser
@@ -152,20 +166,10 @@ function AndroidUpdate() {
           {status}
         </p>
       )}
-      {update && (
-        <p className="muted" style={{ marginTop: 12 }}>
-          Walnut {update.version} is available. You are on v{APP_VERSION}.
-        </p>
-      )}
-      {update && (
-        <p className="muted small" style={{ marginTop: 8 }}>
-          Android asks once to allow installs from Walnut; after that the update installs over
-          this build.
-        </p>
-      )}
       <p className="muted small" style={{ marginTop: 8 }}>
-        If checking or downloading here fails, <strong>Download in browser</strong> opens the APK
-        page on the website instead.
+        {update
+          ? 'Android asks once to allow installs from Walnut; after that the update installs over this build.'
+          : 'If checking or downloading here fails, Download in browser opens the APK page on the website instead.'}
       </p>
     </section>
   );
