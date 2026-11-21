@@ -23,6 +23,7 @@ import { replayTour } from '../components/Tour';
 import { UpdatePanel } from '../components/UpdatePanel';
 import { Icon } from '../components/Icon';
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from '../lib/theme';
+import { UpiTracker, upiTrackAvailable, type UpiTrackerStatus } from '../lib/upi-native';
 
 /** Date and time are printed separately so the date stays the strongest line on the card. */
 function snapshotDay(at: string): string {
@@ -35,6 +36,128 @@ function snapshotTime(at: string): string {
 
 function countLabel(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+/**
+ * Android-only: reads payment notifications. The toggle is device-local (a permission belongs
+ * to this phone, not the account), so it lives in native prefs rather than the synced document.
+ * The account choice does sync, because it changes where entries are recorded.
+ */
+function UpiAutoTrackCard({ store }: { store: Store }) {
+  const { data, update } = store;
+  const available = upiTrackAvailable();
+  const [status, setStatus] = useState<UpiTrackerStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!available) return;
+    let cancelled = false;
+    const read = () => {
+      UpiTracker.status()
+        .then((next) => {
+          if (!cancelled) setStatus(next);
+        })
+        .catch(() => {});
+    };
+    read();
+    // The system permission is granted outside the app, so re-read when the user comes back.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') read();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [available]);
+
+  if (!available) return null;
+
+  async function toggle() {
+    if (!status) return;
+    setBusy(true);
+    try {
+      setStatus(await UpiTracker.setEnabled({ enabled: !status.enabled }));
+    } catch {
+      // Keep showing the last known state; nothing here may block manual entry.
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const enabled = status?.enabled ?? false;
+  const access = status?.notificationAccess ?? false;
+  const lastDetected = status?.lastDetectedAt
+    ? new Date(status.lastDetectedAt).toLocaleString()
+    : null;
+
+  return (
+    <section className="card col-12">
+      <div className="card-head">
+        <div>
+          <h2>Auto-track UPI payments</h2>
+          <p>Android only · Google Pay, PhonePe, Paytm, BHIM and Amazon Pay</p>
+        </div>
+        <span className={`chip${enabled ? '' : ' warn'}`}>{enabled ? 'On' : 'Off'}</span>
+      </div>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Walnut reads the payment confirmation your UPI app shows and adds the expense for you.
+        Android grants notification access to an app rather than to one kind of notification, so
+        Walnut checks the source app first and reads nothing from any other app. Only a payment's
+        amount, merchant, time and app are kept — never the notification text — nothing is uploaded
+        directly, and it does not run in the background: Android wakes Walnut for a moment only
+        when you pay.
+      </p>
+      <div className="form-grid">
+        <label>
+          Notification access
+          <div className="upi-row">
+            <span className={`badge ${access ? 'up' : 'warn'}`}>
+              {access ? 'Allowed' : 'Not allowed'}
+            </span>
+            <button
+              className="btn small"
+              onClick={() => void UpiTracker.openNotificationAccessSettings().catch(() => {})}
+            >
+              Open settings
+            </button>
+          </div>
+        </label>
+        <label>
+          Auto-track
+          <div className="upi-row">
+            <span className={`badge ${enabled ? 'up' : 'warn'}`}>{enabled ? 'On' : 'Off'}</span>
+            <button className="btn small" onClick={toggle} disabled={busy || !status}>
+              {enabled ? 'Turn off' : 'Turn on'}
+            </button>
+          </div>
+        </label>
+        <label>
+          Add detected payments to
+          <Select
+            value={data.settings.upiAccountId ?? data.accounts[0]?.id ?? ''}
+            ariaLabel="Account for detected payments"
+            options={data.accounts.map((a) => ({ value: a.id, label: a.name }))}
+            onChange={(v) =>
+              update((p) => ({ ...p, settings: { ...p.settings, upiAccountId: v } }))
+            }
+          />
+        </label>
+        <label>
+          Last payment detected
+          <div className="upi-row">
+            <span className="muted small">{lastDetected ?? 'Nothing detected yet'}</span>
+          </div>
+        </label>
+      </div>
+      <p className="muted small" style={{ marginBottom: 0 }}>
+        If a payment is missed, notifications for that UPI app are probably off, or Android has
+        put Walnut to sleep in battery settings. Add it manually — manual entry always works.
+      </p>
+    </section>
+  );
 }
 
 export function Settings({ store }: { store: Store }) {
@@ -263,6 +386,8 @@ export function Settings({ store }: { store: Store }) {
         </section>
 
         <UpdatePanel />
+
+        <UpiAutoTrackCard store={store} />
 
         <section className="card col-6" data-tour="walkthrough">
           <div className="card-head"><div><h2>Walkthrough</h2><p>A guided tour of where things are</p></div></div>

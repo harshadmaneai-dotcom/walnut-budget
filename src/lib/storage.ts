@@ -25,6 +25,8 @@ export const LEGACY_CLAIM_KEY = 'walnut:legacy-claimed';
 
 export const DATA_VERSION = 6;
 export const INVESTMENT_CATEGORY_ID = 'c-invest';
+/** How many discarded detection keys are remembered; older ones fall off first. */
+export const UPI_IGNORED_LIMIT = 200;
 
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'c-food', name: 'Food', type: 'expense', group: 'need', monthlyBudget: 500_00 },
@@ -45,7 +47,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
 export function defaultData(): AppData {
   return {
     version: DATA_VERSION,
-    settings: { currency: DEFAULT_CURRENCY, firstDayOfWeek: 1 },
+    settings: { currency: DEFAULT_CURRENCY, firstDayOfWeek: 1, upiAccountId: null },
     accounts: [{ id: 'a-cash', name: 'Cash', kind: 'cash', openingBalance: 0 }],
     categories: DEFAULT_CATEGORIES,
     transactions: [],
@@ -55,6 +57,7 @@ export function defaultData(): AppData {
     favorPeople: [],
     recurring: [],
     assets: [],
+    upiIgnored: [],
   };
 }
 
@@ -166,6 +169,23 @@ function normalizeTransactions(value: unknown, assetIds = new Set<string>()): Tr
       typeof record.assetId === 'string' && assetIds.has(record.assetId) ? record.assetId : undefined;
     const assetRole =
       assetId && record.type !== 'income' && record.assetRole === 'capital' ? 'capital' : undefined;
+    // Auto-detected fields are written only by this app; a document from an older build simply
+    // has none, and an unknown value must not turn a hand-typed entry into a detected one.
+    const autoSource = record.source === 'auto_upi';
+    const sourceApp =
+      autoSource && typeof record.sourceApp === 'string'
+        ? record.sourceApp.trim().slice(0, 24) || undefined
+        : undefined;
+    const reviewStatus: Transaction['reviewStatus'] = autoSource
+      ? record.reviewStatus === 'confirmed'
+        ? 'confirmed'
+        : 'needs_review'
+      : undefined;
+    const detectedAt = autoSource ? asTimestamp(record.detectedAt) : undefined;
+    const upiKey =
+      autoSource && typeof record.upiKey === 'string'
+        ? record.upiKey.slice(0, 300) || undefined
+        : undefined;
     transactions.push({
       id: record.id,
       type: record.type === 'income' ? 'income' : 'expense',
@@ -178,6 +198,11 @@ function normalizeTransactions(value: unknown, assetIds = new Set<string>()): Tr
       ...(createdAt ? { createdAt } : {}),
       ...(assetId ? { assetId } : {}),
       ...(assetRole ? { assetRole } : {}),
+      ...(autoSource ? { source: 'auto_upi' as const } : {}),
+      ...(sourceApp ? { sourceApp } : {}),
+      ...(reviewStatus ? { reviewStatus } : {}),
+      ...(detectedAt ? { detectedAt } : {}),
+      ...(upiKey ? { upiKey } : {}),
     });
   }
   return transactions;
@@ -431,6 +456,19 @@ function migrateCategories(categories: Category[]): Category[] {
  * app's control (localStorage can be edited, backups are user files), so each section is
  * validated instead of trusted: a bad value must degrade, never crash the app on launch.
  */
+/** A discarded detection key is a short string; duplicates and junk are dropped. */
+function normalizeUpiIgnored(value: unknown): string[] {
+  const keys: string[] = [];
+  for (const entry of asArray(value)) {
+    if (typeof entry !== 'string') continue;
+    const key = entry.trim();
+    if (!key || key.length > 300 || keys.includes(key)) continue;
+    keys.push(key);
+    if (keys.length >= UPI_IGNORED_LIMIT) break;
+  }
+  return keys;
+}
+
 export function normalizeData(data: AppData): AppData {
   const source = asRecord(data) ?? {};
   const settings = asRecord(source.settings) ?? {};
@@ -448,6 +486,10 @@ export function normalizeData(data: AppData): AppData {
     settings: {
       currency: normalizeCurrency(settings.currency),
       firstDayOfWeek: settings.firstDayOfWeek === 0 ? 0 : 1,
+      upiAccountId:
+        typeof settings.upiAccountId === 'string' && settings.upiAccountId
+          ? settings.upiAccountId
+          : null,
     },
     // The app is unusable without at least one account and one category.
     accounts: accounts.length ? accounts : fallback.accounts,
@@ -459,6 +501,7 @@ export function normalizeData(data: AppData): AppData {
     favorPeople,
     recurring: normalizeRecurring(source.recurring),
     assets,
+    upiIgnored: normalizeUpiIgnored(source.upiIgnored),
   };
 }
 

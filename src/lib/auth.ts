@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { backendConfigured, supabase } from './supabase';
 import { WEB_ORIGIN } from './downloads';
 import { clearCached, isDirty } from './storage';
+import { upiTrackAvailable, UpiTracker } from './upi-native';
 
 export interface AuthState {
   /** Null until the stored session has been checked. */
@@ -107,6 +108,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Only drop the local copy once the cloud has everything, so an offline edit is never
     // lost; and leaving nothing behind means a shared device shows no trace of the budget.
     if (userId && !isDirty(userId)) clearCached(userId);
+    // A payment detected on this phone must not wait for whoever signs in next.
+    if (upiTrackAvailable()) {
+      try {
+        await UpiTracker.clearAccount();
+      } catch {
+        // Auto-tracking is optional; sign-out must never fail because of it.
+      }
+    }
   }, []);
 
   const value = useMemo<AuthState>(

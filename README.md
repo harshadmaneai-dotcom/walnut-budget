@@ -97,6 +97,33 @@ The Android app is the same web bundle wrapped in Capacitor (`android/`, `capaci
 - **Update integrity:** `ApkUpdaterPlugin` only hands a downloaded APK to the installer when its SHA-256 matches the published manifest and its signing certificate matches the installed app. A tampered, truncated or stale download is deleted instead of installed.
 - **Known weakness:** the keystore password is still `walnut`, so anyone with read access to this repository can sign a build that Android would accept as an update. Fixing that means re-encrypting the same key under a strong password (`keytool -importkeystore`), which preserves the certificate and therefore existing installs. Do it with the original file backed up.
 
+## Auto-tracking UPI payments (Android)
+
+Settings → **Auto-track UPI payments** turns the confirmation Google Pay, PhonePe, Paytm, BHIM or Amazon Pay shows after a successful payment into an expense. It is Android-only and opt-in: off by default, nothing is captured on the desktop or the website, and manual entry is unchanged either way.
+
+### Notification access is what makes it work
+
+Android has no per-app, per-payment notification permission. The only supported way to see a payment confirmation while Walnut is closed is the **Notification access** special permission (`BIND_NOTIFICATION_LISTENER_SERVICE`), granted in system settings rather than by a dialog. Walnut's listener (`UpiNotificationListener.java`) is bound by the system only after that grant, and the permission can be revoked at any time.
+
+- **What the permission technically allows.** Once granted, Android delivers every app's notifications to Walnut, not just the five UPI apps'. The listener drops anything that is not from one of those packages on the first comparison, before any text is read.
+- **Granting it.** Settings → Auto-track UPI payments → **Open settings**, then enable Walnut under *Notification access* / *Device & app notifications* (the screen is `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`). Android 13+ files it under *Special app access*; on some builds it is inside *Privacy*. If Walnut is missing from the list, the system has not yet registered the listener — reopen the app once, or check that the app is not disabled or inside a work profile.
+- **Reading the state.** The card shows **Allowed** or **Not allowed**, read from the system setting every time the page is opened or regains focus, so revoking access outside the app is reflected on return. The in-app toggle is separate from the permission: the toggle says whether Walnut should use access it already has.
+- **Revoking it.** Turn off Walnut in the same system list. The in-app toggle is untouched, the card returns to **Not allowed**, and nothing more is captured. No other Walnut feature depends on the permission.
+
+### What is captured, and what is kept
+
+- Only a *successful debit* is stored. The parser rejects received, credited, refunded, failed, declined, cancelled, pending, collect-request and promotional notifications, and drops group summaries when a child notification already carries the payment.
+- The raw notification text is never written to disk, logged or uploaded. The queue holds exactly five fields per payment: the notification key, the amount in paise, the merchant line, the post time and the source app label.
+- A device-local queue in `SharedPreferences` (at most 50 entries) holds payments until the app opens. The web layer drains that queue and merges it through the same `store.update` → Supabase save path as a manual edit, so there is no second sync system and no second table. A payment made while Walnut is closed reaches the desktop at the phone's next app open.
+- The transaction id is derived from the notification key, so merging the same item again (a retry, a re-post, or the same payment seen on another device) updates one row instead of adding a second.
+- Detected entries land in review: they are marked *Auto*, show a **Needs review** strip in Transactions, and can be confirmed, recategorised or discarded. Discarding deletes the entry and remembers the notification key (the newest 200), so the same notification is not re-added.
+- The target account is chosen under **Add detected payments to** and syncs with the document; the toggle itself stays device-local, because a permission belongs to the phone.
+- `settings.upiAccountId` and the hidden `upiIgnored` list live in the normal document and need no migration.
+
+### When a payment is missed
+
+The usual causes, in order: notifications for that UPI app are turned off in Android, Walnut was removed from battery-optimised apps, the permission was revoked, or the confirmation did not name an amount (some UPI apps only notify for collect requests). Manual entry always works, and it is the only fallback by design — there is no Accessibility, SMS or screen-scraping path.
+
 ## Releasing
 
 ```bash
@@ -119,6 +146,9 @@ The script checks the tree is clean and in sync, runs the tests, bumps `package.
 - `src/lib/calc.ts` – pure logic: balances, loan status, monthly totals, recurring rules.
 - `src/lib/assets.ts` – asset month totals, all-time capital, milestones and linked-entry rows.
 - `src/lib/storage.ts` – per-account local cache, default data, and the one-time legacy import.
+- `src/lib/upi.ts` – pure auto-tracking logic: deterministic ids, native item → transaction, review and discard rules.
+- `src/lib/upi-native.ts` – the Android bridge and the platform gate; `src/lib/useUpiIngest.ts` drains its queue into the document.
+- `android/app/src/main/java/app/walnut/mobile/Upi*.java` – the notification listener, parser, queue and bridge plugin.
 - `src/lib/remote.ts` – per-account reads and writes to `walnut_data`.
 - `src/store.ts` – React state hook for one account; persists changes and applies recurring rules on open.
 - `src/components/AuthScreen.tsx` – sign-in / create-account screen.

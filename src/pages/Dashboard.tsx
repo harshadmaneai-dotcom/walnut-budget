@@ -8,6 +8,7 @@ import { TransferForm } from '../components/TransferForm';
 import { GroupDonut } from '../components/GroupDonut';
 import { Icon } from '../components/Icon';
 import { GROUPS, categoryGroup, groupSpend, groupTotal } from '../lib/groups';
+import { needsReviewCount } from '../lib/upi';
 
 export function Dashboard({ store }: { store: Store }) {
   const { data } = store;
@@ -52,6 +53,7 @@ export function Dashboard({ store }: { store: Store }) {
   const activity = buildActivity(data, 10);
   const recent = activity.entries;
 
+  const reviewCount = needsReviewCount(data);
   const net = totals.income - totals.expense;
   const spentShare = totals.income > 0 ? Math.min(100, (totals.expense / totals.income) * 100) : 0;
   const netLabel = net < 0 ? 'Over' : net > 0 ? 'Saving' : 'Even';
@@ -125,6 +127,24 @@ export function Dashboard({ store }: { store: Store }) {
             </p>
           </div>
         </section>
+
+        {reviewCount > 0 && (
+          <section className="card col-12 review-card">
+            <div className="review-main">
+              <span className="metric-icon out"><Icon name="spark" size={17} /></span>
+              <div>
+                <strong>
+                  {reviewCount} {reviewCount === 1 ? 'payment was' : 'payments were'} detected
+                  automatically
+                </strong>
+                <p className="muted small" style={{ margin: '2px 0 0' }}>
+                  Confirm them so your spending is right, or discard anything that is not yours.
+                </p>
+              </div>
+            </div>
+            <a className="btn small" href="#transactions">Review</a>
+          </section>
+        )}
 
         <section className="card col-8" data-tour="groups">
           <div className="card-head">

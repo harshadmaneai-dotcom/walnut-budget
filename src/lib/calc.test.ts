@@ -113,14 +113,23 @@ describe('recurring rules', () => {
   };
 
   it('creates one transaction per due period and does not duplicate on re-run', () => {
-    let n = 0;
-    const makeId = () => `gen${++n}`;
-    const first = applyRecurring([rule], '2026-03-20', makeId);
+    const first = applyRecurring([rule], '2026-03-20');
     expect(first.created.map((t) => t.date)).toEqual(['2026-01-15', '2026-02-15', '2026-03-15']);
+    expect(first.created.map((t) => t.id)).toEqual([
+      'rec-rr1-2026-01-15',
+      'rec-rr1-2026-02-15',
+      'rec-rr1-2026-03-15',
+    ]);
     expect(first.rules[0].lastApplied).toBe('2026-03-15');
 
-    const second = applyRecurring(first.rules, '2026-03-20', makeId);
+    const second = applyRecurring(first.rules, '2026-03-20');
     expect(second.created).toHaveLength(0);
+  });
+
+  it('generates the same ids for the same due dates on another device', () => {
+    const first = applyRecurring([rule], '2026-02-20');
+    const second = applyRecurring([{ ...rule }], '2026-02-20');
+    expect(second.created.map((t) => t.id)).toEqual(first.created.map((t) => t.id));
   });
 
   it('clamps month-end dates', () => {

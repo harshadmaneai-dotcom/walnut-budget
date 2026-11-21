@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { usePopup } from './popup';
 import { formatDate, todayISO } from '../lib/format';
@@ -8,8 +8,15 @@ interface Props {
   onChange: (value: string) => void;
   placeholder?: string;
   clearable?: boolean;
-  /** 1 = Monday, 0 = Sunday */
+  /** 1 = Monday, 0 = Sunday. Defaults to the saved first-day-of-week setting. */
   weekStartsOn?: 0 | 1;
+}
+
+const WeekStartContext = createContext<0 | 1>(1);
+
+/** Shares the saved first-day-of-week preference with every date picker. */
+export function WeekStartProvider({ value, children }: { value: 0 | 1; children: ReactNode }) {
+  return <WeekStartContext.Provider value={value}>{children}</WeekStartContext.Provider>;
 }
 
 const WEEK = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -32,7 +39,9 @@ function monthCells(y: number, m: number, weekStart: number): (number | null)[] 
 }
 
 /** Themed calendar popover, replacing the unthemed native date input picker. */
-export function DatePicker({ value, onChange, placeholder = 'Select date', clearable = true, weekStartsOn = 1 }: Props) {
+export function DatePicker({ value, onChange, placeholder = 'Select date', clearable = true, weekStartsOn }: Props) {
+  const savedWeekStart = useContext(WeekStartContext);
+  const weekStart = weekStartsOn ?? savedWeekStart;
   const { triggerRef, popupRef, open, setOpen, pos } = usePopup(276, 344);
   const today = todayISO();
   const base = parse(value) ?? parse(today)!;
@@ -53,8 +62,8 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', clear
     setOpen(false);
   }
 
-  const cells = monthCells(view.y, view.m, weekStartsOn);
-  const weekdays = Array.from({ length: 7 }, (_, i) => WEEK[(weekStartsOn + i) % 7]);
+  const cells = monthCells(view.y, view.m, weekStart);
+  const weekdays = Array.from({ length: 7 }, (_, i) => WEEK[(weekStart + i) % 7]);
   const monthLabel = new Date(view.y, view.m, 1).toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric',

@@ -224,7 +224,6 @@ export function addMonths(date: string, months: number): string {
 export function applyRecurring(
   rules: RecurringRule[],
   today: string,
-  makeId: () => string,
 ): { created: Transaction[]; rules: RecurringRule[] } {
   const created: Transaction[] = [];
   const updated = rules.map((rule) => {
@@ -241,7 +240,9 @@ export function applyRecurring(
     let last = rule.lastApplied;
     while (next <= today) {
       created.push({
-        id: makeId(),
+        // Derived from the rule and due date: every device generates the same id for the
+        // same occurrence, so a reload or a second device cannot duplicate it.
+        id: `rec-${rule.id}-${next}`,
         type: rule.type,
         amount: rule.amount,
         date: next,

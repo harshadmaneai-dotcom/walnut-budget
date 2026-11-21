@@ -1438,3 +1438,20 @@ button.asset-stage-step { cursor: pointer; }
 }
 
 /* END */
+
+/* ---------- Auto-tracked UPI payments ---------- */
+.review-strip {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px; margin-bottom: 14px;
+  border: 1px solid var(--amber-soft); border-radius: 16px;
+  background: var(--amber-soft); color: var(--amber);
+  font-size: 13px; line-height: 1.5;
+}
+.review-strip svg { flex-shrink: 0; margin-top: 1px; }
+.review-strip strong { color: inherit; }
+.tx-table tr.needs-review td { background: var(--amber-soft); }
+.review-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.review-main { display: flex; align-items: center; gap: 12px; }
+.review-main .metric-icon { flex-shrink: 0; }
+.review-card strong { font-size: 14px; }
+.upi-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

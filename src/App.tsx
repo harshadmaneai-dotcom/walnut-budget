@@ -7,6 +7,7 @@ import { Assets } from './pages/Assets';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
 import { ConfirmHost } from './components/confirm';
+import { WeekStartProvider } from './components/DatePicker';
 import { Icon, type IconName } from './components/Icon';
 import { AuthProvider, useAuth } from './lib/auth';
 import { AuthScreen, BackendNotice } from './components/AuthScreen';
@@ -16,6 +17,7 @@ import { Tour } from './components/Tour';
 import { UpdateBanner } from './components/UpdateBanner';
 import { backendConfigured } from './lib/supabase';
 import { isNativeShell } from './lib/platform';
+import { useUpiIngest } from './lib/useUpiIngest';
 
 export type Page =
   | 'landing'
@@ -54,6 +56,8 @@ function Splash() {
 
 function BudgetApp({ userId }: { userId: string }) {
   const store = useStore(userId);
+  // Auto-tracking is Android-only and merges through this same store; elsewhere it is a no-op.
+  useUpiIngest(store, userId);
   const [page, setPage] = useState<Page>(pageFromHash);
 
   useEffect(() => {
@@ -107,14 +111,16 @@ function BudgetApp({ userId }: { userId: string }) {
         <div className="mobile-brand">
           <Logo size={24} withWordmark />
         </div>
-        <div className="page-view" key={page}>
-          {page === 'dashboard' && <Dashboard store={store} />}
-          {page === 'transactions' && <Transactions store={store} />}
-          {page === 'loans' && <Loans store={store} />}
-          {page === 'assets' && <Assets store={store} />}
-          {page === 'reports' && <Reports store={store} />}
-          {page === 'settings' && <Settings store={store} />}
-        </div>
+        <WeekStartProvider value={store.data.settings.firstDayOfWeek}>
+          <div className="page-view" key={page}>
+            {page === 'dashboard' && <Dashboard store={store} />}
+            {page === 'transactions' && <Transactions store={store} />}
+            {page === 'loans' && <Loans store={store} />}
+            {page === 'assets' && <Assets store={store} />}
+            {page === 'reports' && <Reports store={store} />}
+            {page === 'settings' && <Settings store={store} />}
+          </div>
+        </WeekStartProvider>
       </main>
       {store.syncError && (
         <div className="sync-banner" role="status" aria-live="polite">

@@ -7,7 +7,6 @@ import {
   loadCached,
   markDirty,
   markLegacyClaimed,
-  newId,
   normalizeData,
   saveData,
   saveSnapshot,
@@ -19,7 +18,7 @@ import { fetchRemote, fetchRemoteTimestamp, remoteEnabled, saveRemote } from './
 import { REMOTE_POLL_MS, remoteIsNewer } from './lib/sync';
 
 function withDueRecurring(d: AppData): AppData {
-  const { created, rules } = applyRecurring(d.recurring, todayISO(), newId);
+  const { created, rules } = applyRecurring(d.recurring, todayISO());
   return created.length
     ? { ...d, recurring: rules, transactions: [...d.transactions, ...created] }
     : d;
@@ -110,8 +109,12 @@ export function useStore(userId: string) {
           // A cache holding unsynced edits wins over the cloud copy; otherwise the cloud is
           // authoritative. This is what stops a reload mid-write from losing an edit.
           if (!dirty) {
-            const next = withDueRecurring(normalizeData(remote.data));
+            const base = normalizeData(remote.data);
+            const next = withDueRecurring(base);
             preserveBeforeRemote(next);
+            // Generated recurring entries are real changes, so persist them even when the
+            // user makes no other edit; otherwise every open would rebuild them locally.
+            if (next !== base) needsInitialPush.current = true;
             setData(next);
           }
         } else if (initial.legacy && isBlankData(initial.data)) {
@@ -266,7 +269,7 @@ export function useStore(userId: string) {
   const replaceAll = useCallback((next: AppData) => setData(next), []);
   const dismissRecovery = useCallback(() => setRecoveryNotice(null), []);
 
-  return { data, update, replaceAll, syncStatus, syncError, recoveryNotice, dismissRecovery, retrySync };
+  return { data, update, replaceAll, syncStatus, syncError, recoveryNotice, dismissRecovery, retrySync, ready };
 }
 
 export type Store = ReturnType<typeof useStore>;

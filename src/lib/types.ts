@@ -37,6 +37,19 @@ export interface Transaction {
   assetId?: string;
   /** A capital contribution recorded as an Investments expense, kept out of asset operating net. */
   assetRole?: 'capital';
+  /**
+   * How the entry was captured. Absent on everything typed by hand, so documents saved before
+   * auto-tracking existed stay valid without a migration.
+   */
+  source?: 'auto_upi';
+  /** Which app posted the payment notification: gpay, phonepe, paytm, bhim, amazonpay. */
+  sourceApp?: string;
+  /** Auto-detected entries wait here until the user confirms or discards them. */
+  reviewStatus?: 'needs_review' | 'confirmed';
+  /** ISO timestamp of the notification, kept so review can show when the payment happened. */
+  detectedAt?: string;
+  /** Identity of the notification this came from: the dedupe key, and what a discard remembers. */
+  upiKey?: string;
 }
 
 export interface Transfer {
@@ -110,6 +123,8 @@ export interface RecurringRule {
 export interface Settings {
   currency: string;
   firstDayOfWeek: 0 | 1; // 0 = Sunday, 1 = Monday
+  /** Account auto-detected UPI payments are added to; null uses the first account. */
+  upiAccountId?: string | null;
 }
 
 /** Something being built for income, or something intended to be owned. */
@@ -158,4 +173,9 @@ export interface AppData {
   favorPeople: Person[];
   recurring: RecurringRule[];
   assets: Asset[];
+  /**
+   * Detections the user discarded. A re-posted notification must not recreate one, and the
+   * transaction itself is gone, so the key has to outlive it. Oldest entries fall off the cap.
+   */
+  upiIgnored?: string[];
 }

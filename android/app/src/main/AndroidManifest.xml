@@ -26,6 +26,28 @@
 
         </activity>
 
+        <!--
+            Reads payment confirmations posted by UPI apps. The system binds this only after the
+            user grants Notification access, needs no runtime permission of its own, and wakes
+            it per notification rather than keeping it running.
+        -->
+        <service
+            android:name=".UpiNotificationListener"
+            android:label="@string/app_name"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+            <!-- Payment confirmations are alerting notifications; conversations are never read. -->
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="alerting|silent" />
+            <meta-data
+                android:name="android.service.notification.disabled_filter_types"
+                android:value="ongoing|conversations" />
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

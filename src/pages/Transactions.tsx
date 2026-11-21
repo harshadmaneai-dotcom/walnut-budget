@@ -10,6 +10,13 @@ import { confirmDialog } from '../components/confirm';
 import { categoryGroup, groupLabel } from '../lib/groups';
 import { balanceKey, balancesAfterEntries } from '../lib/calc';
 import { Icon } from '../components/Icon';
+import {
+  confirmDetected,
+  discardDetected,
+  isNeedsReview,
+  needsReviewCount,
+  sourceAppLabel,
+} from '../lib/upi';
 
 type SortKey = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
 type TypeFilter = 'all' | TxType | 'transfer' | 'repayment';
@@ -34,6 +41,7 @@ export function Transactions({ store }: { store: Store }) {
   // Running balances come from the data, not the current sort, so every row shows what that
   // account really held right after the entry.
   const balancesAfter = useMemo(() => balancesAfterEntries(data), [data]);
+  const reviewCount = needsReviewCount(data);
 
   const catName = (id: string) => data.categories.find((c) => c.id === id)?.name ?? '';
   const accName = (id: string | null) => data.accounts.find((a) => a.id === id)?.name ?? '—';
@@ -121,6 +129,19 @@ export function Transactions({ store }: { store: Store }) {
     update((prev) => ({ ...prev, transactions: prev.transactions.filter((t) => t.id !== id) }));
   }
 
+  /** A discarded detection also remembers its notification, so it cannot come back. */
+  async function discardTransaction(tx: Transaction) {
+    const ok = await confirmDialog({
+      title: 'Discard this detected payment?',
+      message:
+        'The expense is removed and this notification is ignored, so it will not be detected again.',
+      confirmLabel: 'Discard',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    update((prev) => discardDetected(prev, tx.id));
+  }
+
   async function removeTransfer(id: string) {
     const ok = await confirmDialog({
       title: 'Delete this transfer?',
@@ -162,6 +183,11 @@ export function Transactions({ store }: { store: Store }) {
           <h1>Transactions<span className="accent">.</span></h1>
         </div>
         <div className="topbar-actions">
+          {reviewCount > 0 && (
+            <span className="chip warn">
+              {reviewCount} {reviewCount === 1 ? 'payment' : 'payments'} to review
+            </span>
+          )}
           <button className="btn" onClick={() => setEditingTransfer('new')}>
             <Icon name="swap" size={17} /> Transfer
           </button>
@@ -218,6 +244,18 @@ export function Transactions({ store }: { store: Store }) {
             onChange={(v) => setSort(v as SortKey)}
           />
         </div>
+
+        {reviewCount > 0 && (
+          <div className="review-strip" role="status">
+            <Icon name="spark" size={16} />
+            <span>
+              <strong>
+                {reviewCount} {reviewCount === 1 ? 'payment' : 'payments'} detected
+              </strong>{' '}
+              from UPI notifications. Confirm each one, fix the details, or discard a false match.
+            </span>
+          </div>
+        )}
 
         {rows.length === 0 ? (
           <div className="empty">No entries match these filters.</div>
@@ -281,9 +319,21 @@ export function Transactions({ store }: { store: Store }) {
 
                   const t = entry.tx;
                   return (
-                    <tr key={`tx-${t.id}`}>
+                    <tr key={`tx-${t.id}`} className={isNeedsReview(t) ? 'needs-review' : undefined}>
                       <td className="tx-date">{formatDate(t.date)}</td>
-                      <td className="tx-cat">{catName(t.categoryId)}{t.recurringId && <span className="badge up" style={{ marginLeft: 8 }}>Recurring</span>}</td>
+                      <td className="tx-cat">
+                        {catName(t.categoryId)}
+                        {t.recurringId && <span className="badge up" style={{ marginLeft: 8 }}>Recurring</span>}
+                        {t.source === 'auto_upi' && (
+                          <span
+                            className={`badge ${isNeedsReview(t) ? 'warn' : 'up'}`}
+                            style={{ marginLeft: 8 }}
+                            title={`Detected from ${sourceAppLabel(t.sourceApp)}`}
+                          >
+                            {isNeedsReview(t) ? 'Review' : 'Auto'} · {sourceAppLabel(t.sourceApp)}
+                          </span>
+                        )}
+                      </td>
                       <td className="tx-acc">{accName(t.accountId)}</td>
                       <td className="tx-note muted">{t.note}</td>
                       <td className={`num tx-amt ${t.type === 'income' ? 'pos' : 'neg'}`}>
@@ -292,10 +342,24 @@ export function Transactions({ store }: { store: Store }) {
                       {balanceAfter(entry)}
                       <td className="tx-actions">
                         <div>
+                          {isNeedsReview(t) && (
+                            <button
+                              className="icon-btn"
+                              aria-label="Confirm detected payment"
+                              title="Confirm"
+                              onClick={() => update((prev) => confirmDetected(prev, t.id))}
+                            >
+                              <Icon name="check" size={16} />
+                            </button>
+                          )}
                           <button className="icon-btn" aria-label="Edit transaction" onClick={() => setEditing(t)}>
                             <Icon name="pencil" size={16} />
                           </button>
-                          <button className="icon-btn danger" aria-label="Delete transaction" onClick={() => removeTransaction(t.id)}>
+                          <button
+                            className="icon-btn danger"
+                            aria-label={isNeedsReview(t) ? 'Discard detected payment' : 'Delete transaction'}
+                            onClick={() => (isNeedsReview(t) ? void discardTransaction(t) : removeTransaction(t.id))}
+                          >
                             <Icon name="trash" size={16} />
                           </button>
                         </div>
