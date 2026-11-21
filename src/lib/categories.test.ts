@@ -22,6 +22,7 @@ function sample(): AppData {
     loans: [],
     favors: [],
     favorPeople: [],
+    assets: [],
     recurring: [
       {
         id: 'r1',

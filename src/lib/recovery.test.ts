@@ -26,6 +26,20 @@ describe('missingEntryCount', () => {
         repayments: [{ id: 'r1', amount: 100, date: '2026-11-04', accountId: null, note: '' }],
       },
     ],
+    assets: [
+      {
+        id: 'asset1',
+        name: 'Commissions',
+        kind: 'stream',
+        stage: 'operating',
+        paused: false,
+        startedOn: '2026-03-01',
+        monthlyTarget: null,
+        capitalTarget: null,
+        milestones: [],
+        notes: '',
+      },
+    ],
   };
 
   it('is zero when the remote copy contains every local record', () => {
@@ -42,6 +56,11 @@ describe('missingEntryCount', () => {
       ...local,
       loans: [{ ...local.loans[0], repayments: [] }],
     };
+    expect(missingEntryCount(local, remote)).toBe(1);
+  });
+
+  it('counts a dropped asset', () => {
+    const remote = { ...local, assets: [] };
     expect(missingEntryCount(local, remote)).toBe(1);
   });
 

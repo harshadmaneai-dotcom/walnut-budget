@@ -3,6 +3,7 @@ import { useStore } from './store';
 import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
 import { Loans } from './pages/Loans';
+import { Assets } from './pages/Assets';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
 import { ConfirmHost } from './components/confirm';
@@ -16,12 +17,20 @@ import { UpdateBanner } from './components/UpdateBanner';
 import { backendConfigured } from './lib/supabase';
 import { isNativeShell } from './lib/platform';
 
-export type Page = 'landing' | 'dashboard' | 'transactions' | 'loans' | 'reports' | 'settings';
+export type Page =
+  | 'landing'
+  | 'dashboard'
+  | 'transactions'
+  | 'loans'
+  | 'assets'
+  | 'reports'
+  | 'settings';
 
 const NAV: { id: Page; label: string; icon: IconName }[] = [
   { id: 'dashboard', label: 'Home', icon: 'grid' },
   { id: 'transactions', label: 'Activity', icon: 'swap' },
   { id: 'loans', label: 'Loans', icon: 'users' },
+  { id: 'assets', label: 'Assets', icon: 'assets' },
   { id: 'reports', label: 'Reports', icon: 'chart' },
   { id: 'settings', label: 'Settings', icon: 'sliders' },
 ];
@@ -102,6 +111,7 @@ function BudgetApp({ userId }: { userId: string }) {
           {page === 'dashboard' && <Dashboard store={store} />}
           {page === 'transactions' && <Transactions store={store} />}
           {page === 'loans' && <Loans store={store} />}
+          {page === 'assets' && <Assets store={store} />}
           {page === 'reports' && <Reports store={store} />}
           {page === 'settings' && <Settings store={store} />}
         </div>

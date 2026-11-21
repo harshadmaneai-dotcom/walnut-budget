@@ -100,6 +100,118 @@ describe('normalizeData', () => {
     expect(parseData(JSON.stringify(data)).transfers).toEqual(data.transfers);
   });
 
+  it('adds an empty assets list to documents saved before assets existed', () => {
+    const legacy: Record<string, unknown> = { ...defaultData() };
+    delete legacy.assets;
+    expect(normalizeData(legacy as never).assets).toEqual([]);
+  });
+
+  it('normalizes assets and keeps links only when the asset exists', () => {
+    const data = normalizeData({
+      ...defaultData(),
+      accounts: [
+        { id: 'a-cash', name: 'Cash', kind: 'cash', openingBalance: 0 },
+        { id: 'a-fund', name: 'Fund', kind: 'bank', openingBalance: 0 },
+      ],
+      assets: [
+        {
+          id: 'a1',
+          name: 'Commissions',
+          kind: 'stream',
+          effort: 'active',
+          stage: 'building',
+          paused: false,
+          startedOn: '2026-03-01',
+          monthlyTarget: 250_000,
+          capitalTarget: 300_000,
+          milestones: [
+            { id: 'm1', text: 'Launch page', dueDate: '2026-04-10', done: false },
+            { id: 'bad', text: '', dueDate: null, done: false },
+          ],
+          notes: 'Keep going',
+        },
+        { id: 'a2', name: '   ' },
+        { name: 'No id' },
+      ],
+      transactions: [
+        {
+          id: 't1',
+          type: 'expense',
+          amount: 50_00,
+          date: '2026-11-01',
+          categoryId: 'c-invest',
+          accountId: 'a-cash',
+          note: '',
+          assetId: 'a1',
+          assetRole: 'capital',
+        },
+        {
+          id: 't2',
+          type: 'expense',
+          amount: 10_00,
+          date: '2026-11-02',
+          categoryId: 'c-food',
+          accountId: 'a-cash',
+          note: '',
+          assetId: 'missing',
+        },
+        {
+          id: 't3',
+          type: 'income',
+          amount: 20_00,
+          date: '2026-11-03',
+          categoryId: 'c-salary',
+          accountId: 'a-cash',
+          note: '',
+          assetId: 'a1',
+          assetRole: 'capital',
+        },
+      ],
+      transfers: [
+        {
+          id: 'tr1',
+          fromAccountId: 'a-cash',
+          toAccountId: 'a-fund',
+          amount: 5_00,
+          date: '2026-11-04',
+          note: '',
+          assetId: 'a1',
+        },
+        {
+          id: 'tr2',
+          fromAccountId: 'a-cash',
+          toAccountId: 'a-fund',
+          amount: 6_00,
+          date: '2026-11-05',
+          note: '',
+          assetId: 'missing',
+        },
+      ],
+    } as never);
+
+    expect(data.assets).toHaveLength(1);
+    expect(data.assets[0]).toMatchObject({
+      id: 'a1',
+      name: 'Commissions',
+      kind: 'stream',
+      effort: 'active',
+      stage: 'building',
+      monthlyTarget: 250_000,
+      capitalTarget: 300_000,
+      notes: 'Keep going',
+    });
+    expect(data.assets[0].milestones).toEqual([
+      { id: 'm1', text: 'Launch page', dueDate: '2026-04-10', done: false },
+    ]);
+    expect(data.transactions.find((tx) => tx.id === 't1')?.assetRole).toBe('capital');
+    expect(data.transactions.find((tx) => tx.id === 't2')?.assetId).toBeUndefined();
+    // A capital role is only meaningful for an expense.
+    expect(data.transactions.find((tx) => tx.id === 't3')?.assetRole).toBeUndefined();
+    expect(data.transfers.find((transfer) => transfer.id === 'tr1')?.assetId).toBe('a1');
+    expect(data.transfers.find((transfer) => transfer.id === 'tr2')?.assetId).toBeUndefined();
+    expect(parseData(JSON.stringify(data)).assets).toEqual(data.assets);
+  });
+
   it('always leaves at least one account and one expense category', () => {
     const data = normalizeData({ ...defaultData(), accounts: [], categories: [] } as never);
     expect(data.accounts.length).toBeGreaterThan(0);

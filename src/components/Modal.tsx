@@ -7,6 +7,8 @@ export type ModalClose = () => void;
 interface ModalProps {
   title: string;
   onClose: () => void;
+  /** A detail sheet needs more room than a short form. */
+  wide?: boolean;
   /**
    * A function child receives the animated close, so a save or cancel handler can let the
    * exit play before the parent unmounts the dialog.
@@ -16,6 +18,10 @@ interface ModalProps {
 
 /** Kept in step with --dur-exit in styles.css. */
 const EXIT_MS = 160;
+
+/** Only the topmost dialog handles Escape when a log/link/confirm sheet is stacked. */
+let modalSequence = 0;
+const modalStack: number[] = [];
 
 function reducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -127,11 +133,22 @@ function useElasticScroll(ref: { readonly current: HTMLDivElement | null }, enab
   }, [ref, enabled]);
 }
 
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, onClose, wide = false, children }: ModalProps) {
   const [closing, setClosing] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const timer = useRef<number | null>(null);
   const requested = useRef(false);
+  const stackId = useRef(0);
+  if (stackId.current === 0) stackId.current = ++modalSequence;
+
+  useEffect(() => {
+    const id = stackId.current;
+    modalStack.push(id);
+    return () => {
+      const index = modalStack.lastIndexOf(id);
+      if (index >= 0) modalStack.splice(index, 1);
+    };
+  }, []);
 
   const close = useCallback(() => {
     if (requested.current) return;
@@ -157,6 +174,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
       // An open picker or confirm dialog owns Escape, not the sheet underneath it.
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       if (document.querySelector('.dd-pop, .dp-pop, .confirm-backdrop')) return;
+      if (modalStack[modalStack.length - 1] !== stackId.current) return;
       close();
     };
     window.addEventListener('keydown', onKey);
@@ -167,7 +185,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
 
   return createPortal(
     <div className={`modal-backdrop${closing ? ' is-closing' : ''}`} onClick={close}>
-      <div className="modal-frame">
+      <div className={`modal-frame${wide ? ' wide' : ''}`}>
         <div
           ref={sheetRef}
           className="modal"

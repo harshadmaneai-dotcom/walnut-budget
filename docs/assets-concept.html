@@ -1,0 +1,1652 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0e3b2a">
+  <title>Assets — Walnut concept</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #0b1a14;
+      --forest: #0e3b2a;
+      --green: #147a4f;
+      --green-dark: #0f5f3d;
+      --green-soft: #e7f6ec;
+      --lime: #c9f25e;
+      --lime-deep: #b7e347;
+      --cream: #f2f3ec;
+      --card: #ffffff;
+      --text: #10201a;
+      --muted: #6a7971;
+      --border: #e3e8dd;
+      --red: #c94d4d;
+      --amber: #a8661a;
+      --amber-soft: #fdf2df;
+      --blue: #2e6fdb;
+      --blue-soft: #e8eefc;
+      --display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+      --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --shadow: 0 1px 2px rgba(11, 26, 20, .04), 0 18px 40px -30px rgba(11, 26, 20, .4);
+      font-family: var(--sans);
+      color: var(--text);
+      background: var(--cream);
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; min-height: 100dvh;
+      background:
+        radial-gradient(900px 520px at 100% -10%, #e8f6df 0%, rgba(232, 246, 223, 0) 60%),
+        radial-gradient(760px 520px at -10% 0%, #eef2dd 0%, rgba(238, 242, 221, 0) 55%),
+        var(--cream);
+    }
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; cursor: pointer; }
+    svg { display: block; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+
+    /* Rail */
+    .rail {
+      position: fixed; z-index: 2; inset: 0 auto 0 0; width: 82px;
+      display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 22px 12px;
+      background: rgba(255, 255, 255, .72); border-right: 1px solid rgba(227, 232, 221, .9);
+      backdrop-filter: blur(16px);
+    }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 15px; display: grid; place-items: center;
+      background: var(--forest); color: var(--lime); box-shadow: 0 9px 20px -15px var(--forest);
+    }
+    .rail-nav { display: grid; gap: 9px; }
+    .rail-link {
+      width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px;
+      color: var(--muted); text-decoration: none; transition: background .16s ease, color .16s ease;
+    }
+    .rail-link:hover { background: var(--green-soft); color: var(--green-dark); }
+    .rail-link.active { background: var(--lime); color: var(--ink); }
+    .rail-link svg { width: 21px; height: 21px; }
+    .rail-spacer { flex: 1; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+      background: #dcebd8; color: var(--green-dark); font-size: 12px; font-weight: 700;
+    }
+
+    main { width: min(1320px, calc(100% - 82px)); margin: 0 auto 0 82px; padding: 32px 42px 56px; }
+    .topbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 25px; }
+    .page-head h1 { margin: 0; font: 600 clamp(32px, 4vw, 42px)/1.05 var(--display); letter-spacing: -.04em; }
+    .page-head p { margin: 9px 0 0; color: var(--muted); font-size: 14px; }
+    .header-actions { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+    .period-select {
+      min-height: 42px; padding: 0 32px 0 14px; border: 1px solid var(--border); border-radius: 999px;
+      background: rgba(255, 255, 255, .88); color: var(--text); font-size: 13px; font-weight: 500;
+      appearance: none;
+      background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position: calc(100% - 17px) 18px, calc(100% - 12px) 18px;
+      background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+    }
+
+    .btn {
+      min-height: 40px; padding: 9px 16px; border: 1px solid var(--border); border-radius: 999px;
+      background: var(--card); color: var(--text); font-weight: 600; font-size: 13px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      transition: border-color .16s ease, background .16s ease, transform .12s ease, box-shadow .16s ease;
+      text-decoration: none;
+    }
+    .btn:hover { border-color: #cfd9c6; box-shadow: 0 8px 18px -16px rgba(11, 26, 20, .6); }
+    .btn:active { transform: scale(.97); }
+    .btn.primary { background: var(--lime); color: var(--ink); border-color: transparent; }
+    .btn.primary:hover { background: var(--lime-deep); }
+    .btn.small { min-height: 32px; padding: 6px 12px; font-size: 12px; }
+    .btn.quiet { background: transparent; border-color: transparent; color: var(--green-dark); }
+    .btn.quiet:hover { background: var(--green-soft); box-shadow: none; }
+    .btn svg { width: 15px; height: 15px; }
+
+    /* Overview */
+    .overview { display: grid; grid-template-columns: 1.16fr 1fr 1fr 1fr; gap: 14px; margin-bottom: 27px; }
+    .metric {
+      min-height: 119px; padding: 18px 20px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 22px; box-shadow: var(--shadow); overflow: hidden; position: relative;
+    }
+    .metric.primary-metric { background: var(--forest); color: #fff; border-color: var(--forest); }
+    .metric.primary-metric::after {
+      content: ''; position: absolute; width: 150px; height: 150px; border-radius: 50%;
+      right: -38px; top: 50px; background: rgba(201, 242, 94, .12);
+    }
+    .metric-label { position: relative; z-index: 1; display: block; margin-bottom: 12px; color: var(--muted); font-size: 12px; font-weight: 500; }
+    .primary-metric .metric-label { color: #c2d7ca; }
+    .metric-value { position: relative; z-index: 1; font: 600 27px/1 var(--display); letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+    .metric-foot { position: relative; z-index: 1; margin-top: 10px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+    .primary-metric .metric-foot { color: #c2d7ca; }
+    .positive { color: var(--green-dark); }
+    .negative { color: var(--red); }
+    .blue-text { color: var(--blue); }
+
+    /* Section heading + filters */
+    .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 0 2px 14px; }
+    .section-heading h2 { margin: 0; font: 600 21px/1.15 var(--display); letter-spacing: -.025em; }
+    .section-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .filter-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 15px; }
+    .filters { display: flex; gap: 7px; flex-wrap: wrap; }
+    .filter-btn {
+      display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 999px;
+      border: 1px solid var(--border); background: rgba(255, 255, 255, .72); color: var(--muted);
+      font-size: 12px; font-weight: 500;
+    }
+    .filter-btn:hover { color: var(--text); border-color: #cfd9c6; }
+    .filter-btn.active { background: var(--forest); border-color: var(--forest); color: #fff; }
+    .filter-count { font-size: 10px; padding: 1px 6px; border-radius: 99px; background: #edf1e7; color: var(--muted); }
+    .filter-btn.active .filter-count { background: rgba(255, 255, 255, .16); color: #fff; }
+    .result-count { color: var(--muted); font-size: 11px; }
+
+    /* Asset cards */
+    .asset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 18px; }
+    .asset-card {
+      min-width: 0; overflow: hidden; background: var(--card); border: 1px solid var(--border);
+      border-radius: 23px; box-shadow: var(--shadow);
+    }
+    .asset-card.is-paused { border-color: #d8e0d5; }
+    .asset-top { padding: 26px 26px 20px; }
+    .asset-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .asset-identity { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .asset-icon {
+      flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 15px;
+      background: var(--green-soft); color: var(--green-dark);
+    }
+    .asset-icon.blue { color: var(--blue); background: var(--blue-soft); }
+    .asset-icon svg { width: 23px; height: 23px; }
+    .asset-title { min-width: 0; }
+    .kind-line { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .kind-pill { color: var(--muted); font-size: 10px; font-weight: 600; }
+    .kind-pill.goal { color: var(--blue); }
+    .asset-title h3 { margin: 0; font: 600 20px/1.2 var(--display); letter-spacing: -.025em; }
+    .link-title {
+      padding: 0; border: 0; background: none; text-align: left; font: inherit; color: inherit;
+    }
+    .link-title:hover { color: var(--green-dark); }
+    .asset-title p { margin: 5px 0 0; color: var(--muted); font-size: 12.5px; }
+    .status {
+      flex: 0 0 auto; padding: 6px 11px; border-radius: 999px; background: var(--green-soft);
+      color: var(--green-dark); font-size: 11px; font-weight: 600; white-space: nowrap;
+    }
+    .status.planning { background: #eef0ea; color: #5f6d65; }
+    .status.building { background: var(--amber-soft); color: var(--amber); }
+    .status.paused { background: #eef0ea; color: #68746d; }
+    .card-controls { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .collapse-btn {
+      width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center;
+      border: 1px solid var(--border); border-radius: 11px; background: var(--card); color: var(--muted);
+      transition: background .16s ease, color .16s ease, border-color .16s ease;
+    }
+    .collapse-btn:hover { background: var(--green-soft); border-color: transparent; color: var(--green-dark); }
+    .collapse-btn svg { width: 16px; height: 16px; transition: transform .2s ease; }
+    .collapse-btn[aria-expanded="false"] svg { transform: rotate(180deg); }
+    .meta-line { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 13px; }
+    .effort {
+      display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 7px;
+      background: #f4f6f0; color: #58665f; font-size: 10px; white-space: nowrap;
+    }
+    .effort svg { width: 12px; height: 12px; }
+    .started { color: var(--muted); font-size: 11px; }
+
+    /* Stage track */
+    .journey { padding: 16px 26px; border-top: 1px solid var(--border); background: #fbfcf8; }
+    .journey-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 11px; font-size: 10px; }
+    .journey-head strong { font-weight: 600; }
+    .journey-head span { color: var(--muted); }
+    .stage-track { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); }
+    .stage-line { position: absolute; top: 8px; left: 15%; right: 15%; height: 2px; background: var(--border); overflow: hidden; }
+    .stage-line span { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--lime)); transition: width .25s ease; }
+    .stage-btn {
+      position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+      padding: 0; border: 0; background: transparent; color: #9aa69d; font-size: 10px; font-weight: 500;
+    }
+    .stage-track.interactive .stage-btn { padding: 4px 2px; border-radius: 9px; }
+    .stage-track.interactive .stage-btn:hover { color: var(--green-dark); background: rgba(231, 246, 236, .6); }
+    .stage-dot {
+      width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
+      background: #e9ede5; border: 2px solid #fbfcf8; color: var(--ink);
+    }
+    .stage-dot svg { width: 10px; height: 10px; }
+    .stage-btn.done { color: var(--green-dark); }
+    .stage-btn.done .stage-dot { background: var(--lime); }
+    .stage-btn.current { color: var(--text); font-weight: 600; }
+    .stage-btn.current .stage-dot { background: var(--lime); box-shadow: 0 0 0 3px rgba(201, 242, 94, .3); }
+    .stage-btn[aria-pressed="true"] .stage-dot { box-shadow: 0 0 0 3px rgba(201, 242, 94, .35); }
+
+    /* Card numbers */
+    .asset-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 23px 26px 21px; gap: 9px; border-top: 1px solid var(--border); }
+    .asset-stat { min-width: 0; }
+    .asset-stat + .asset-stat { padding-left: 14px; border-left: 1px solid var(--border); }
+    .asset-stat span { display: block; color: var(--muted); font-size: 11px; line-height: 1.35; }
+    .asset-stat strong {
+      display: block; margin-top: 8px; font: 600 27px/1.03 var(--display);
+      letter-spacing: -.035em; font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .asset-stat strong.small-value { font-size: 23px; }
+    .pre-revenue { margin: 0 21px 13px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .capital { padding: 0 26px 22px; }
+    .capital-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 11px; }
+    .capital-head > span { color: var(--muted); }
+    .capital-head strong { font-weight: 600; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .capital-head small { font-weight: 400; color: var(--muted); }
+    .progress { height: 7px; margin-top: 8px; border-radius: 999px; background: #edf1e4; overflow: hidden; }
+    .progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--green), var(--lime)); }
+    .progress.blue span { background: linear-gradient(90deg, var(--blue), #8faff1); }
+    .capital-sub { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+
+    .milestone-peek {
+      display: flex; align-items: flex-start; gap: 9px; margin: 0 26px 22px;
+      color: var(--muted); font-size: 10px; line-height: 1.4;
+    }
+    .milestone-peek svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; color: var(--green-dark); }
+    .milestone-peek strong { display: block; color: var(--text); font-size: 12.5px; font-weight: 600; line-height: 1.35; }
+    .milestone-peek small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .milestone-peek.done strong { color: var(--green-dark); }
+
+    .card-activity { border-top: 1px solid var(--border); padding: 13px 21px 4px; }
+    .card-activity-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 2px; }
+    .card-activity-head h4 { margin: 0; font: 600 12px var(--display); }
+    .card-activity-head span { color: var(--muted); font-size: 9px; }
+    .entry {
+      display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 8px;
+      padding: 9px 0; border-bottom: 1px solid #edf0e9;
+    }
+    .entry:last-child { border-bottom: 0; }
+    .entry-date { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+    .entry-main { min-width: 0; }
+    .entry-main strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 600; }
+    .entry-main span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .entry-amount { white-space: nowrap; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .entry-amount.in { color: var(--green-dark); }
+    .entry-amount.out { color: var(--text); }
+    .entry-amount.capital { color: var(--blue); }
+    .entry-kind {
+      display: inline-flex !important; width: fit-content; margin-top: 3px !important; padding: 2px 6px;
+      border-radius: 99px; background: var(--green-soft); color: var(--green-dark) !important; font-size: 9px !important;
+    }
+    .entry-kind.expense { background: #f2f3ec; color: var(--muted) !important; }
+    .entry-kind.capital { background: var(--blue-soft); color: var(--blue) !important; }
+    .card-empty { padding: 12px 0 14px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .entry-link { color: #9aa69d; flex: 0 0 auto; }
+    .entry-link svg { width: 12px; height: 12px; }
+    .entry-right { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+
+    .card-foot {
+      display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 16px 26px; border-top: 1px solid var(--border); background: #fcfdf9;
+    }
+    .foot-actions { display: flex; gap: 7px; }
+
+    .card-collapsed-summary {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+      padding: 14px 26px 19px; border-top: 1px solid var(--border);
+    }
+    .collapsed-net { display: flex; align-items: baseline; gap: 8px; }
+    .collapsed-net strong { font: 600 23px/1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+    .collapsed-net span { color: var(--muted); font-size: 10px; }
+    .collapsed-flow { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+    /* Empty filter state */
+    .empty-state {
+      grid-column: 1 / -1; padding: 38px 24px; border: 1px dashed #d6ded1; border-radius: 20px;
+      background: rgba(255, 255, 255, .55); text-align: center;
+    }
+    .empty-state h3 { margin: 0 0 6px; font: 600 16px var(--display); }
+    .empty-state p { margin: 0 auto 14px; max-width: 360px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+    /* Model explainer */
+    .model-strip {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px;
+      margin-top: 34px; padding-top: 21px; border-top: 1px solid var(--border);
+    }
+    .model-item { display: flex; gap: 9px; align-items: flex-start; }
+    .model-item > svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; color: var(--green-dark); }
+    .model-item h3 { margin: 0 0 4px; font: 600 12px var(--display); letter-spacing: -.01em; }
+    .model-item p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .concept-note { margin: 21px 2px 0; color: #849087; font-size: 10px; text-align: right; }
+
+    /* Dialogs */
+    dialog { border: 0; padding: 0; background: transparent; color: var(--text); }
+    dialog::backdrop { background: rgba(11, 26, 20, .40); backdrop-filter: blur(3px); }
+    .sheet-dialog {
+      position: fixed; inset: 0 0 0 auto; margin: 0; width: min(540px, 100%); max-width: 540px;
+      height: 100dvh; max-height: 100dvh; border-radius: 24px 0 0 24px; overflow: hidden;
+      background: var(--card); box-shadow: -24px 0 70px -34px rgba(11, 26, 20, .65);
+      animation: sheet-in .24s cubic-bezier(.22, 1, .36, 1);
+    }
+    .sheet-dialog[open] { display: block; }
+    .sheet-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+    .sheet-head {
+      position: sticky; top: 0; z-index: 3; padding: 18px 22px 16px; background: var(--card);
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .sheet-head h2 { margin: 0; font: 600 23px/1.15 var(--display); letter-spacing: -.03em; overflow-wrap: anywhere; }
+    .sheet-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .sheet-head .asset-identity { align-items: flex-start; }
+    .sheet-head .meta-line { margin-top: 12px; }
+    .sheet-body { padding: 4px 22px 30px; }
+    .icon-btn {
+      width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center;
+      border: 1px solid var(--border); border-radius: 11px; background: var(--card); color: var(--muted);
+      font-size: 20px; line-height: 1;
+    }
+    .icon-btn:hover { background: var(--green-soft); color: var(--green-dark); border-color: transparent; }
+
+    .modal-dialog {
+      width: min(660px, calc(100% - 28px)); max-height: calc(100dvh - 36px); margin: auto;
+      border-radius: 24px; overflow: hidden; background: var(--card);
+      box-shadow: 0 34px 90px -40px rgba(11, 26, 20, .7);
+      animation: modal-in .2s cubic-bezier(.22, 1, .36, 1);
+    }
+    .modal-dialog[open] { display: flex; flex-direction: column; }
+    .small-dialog { width: min(470px, calc(100% - 28px)); }
+    .modal-inner { display: flex; flex-direction: column; max-height: calc(100dvh - 36px); min-height: 0; }
+    .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding: 21px 22px 16px; border-bottom: 1px solid var(--border); }
+    .modal-head h2 { margin: 0; font: 600 21px/1.2 var(--display); letter-spacing: -.025em; }
+    .modal-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .modal-body { padding: 18px 22px; overflow-y: auto; overscroll-behavior: contain; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 22px 18px; border-top: 1px solid var(--border); background: #fcfdf9; }
+
+    /* Forms */
+    .field { display: block; margin: 0 0 16px; min-width: 0; }
+    .field:last-child { margin-bottom: 0; }
+    .field > span, .field legend, .field-label {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 7px; color: var(--text);
+      font-size: 11px; font-weight: 600;
+    }
+    .field legend { padding: 0; }
+    .optional { color: var(--muted); font-weight: 400; font-size: 10px; }
+    .field input:not([type="radio"]):not([type="hidden"]), .field textarea, .field select {
+      width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px;
+      background: #fbfcf7; color: var(--text); font-size: 13px; outline: none;
+    }
+    .field textarea { min-height: 70px; resize: vertical; line-height: 1.5; }
+    .field input:focus, .field textarea:focus { border-color: #8ebc63; box-shadow: 0 0 0 4px rgba(201, 242, 94, .24); background: #fff; }
+    .field input::placeholder, .field textarea::placeholder { color: #a5b0a8; }
+    .field input[type="number"] { font-variant-numeric: tabular-nums; }
+    fieldset.field { border: 0; padding: 0; margin-inline: 0; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-grid .field { margin-bottom: 16px; }
+    .helper { margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+    .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .choice {
+      position: relative; display: flex; gap: 9px; padding: 12px; border: 1px solid var(--border);
+      border-radius: 13px; background: #fbfcf8; cursor: pointer;
+    }
+    .choice:hover { border-color: #cbd8c3; }
+    .choice:has(input:checked) { border-color: var(--green); background: var(--green-soft); box-shadow: inset 0 0 0 1px var(--green); }
+    .choice:focus-within { outline: 3px solid rgba(91, 154, 109, .5); outline-offset: 2px; }
+    .choice input { position: absolute; opacity: 0; pointer-events: none; }
+    .choice strong { display: block; font-size: 12px; margin-bottom: 3px; color: var(--text); }
+    .choice span { display: block; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .choice .choice-dot { width: 15px; height: 15px; flex: 0 0 auto; margin-top: 1px; border-radius: 50%; border: 1.5px solid #b9c5b5; background: #fff; }
+    .choice:has(input:checked) .choice-dot { border: 4px solid var(--green-dark); }
+
+    .chip-select { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip-choice {
+      min-height: 31px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px;
+      background: var(--card); color: var(--muted); font-size: 10px; font-weight: 500;
+    }
+    .chip-choice:hover { border-color: #cbd8c3; color: var(--text); }
+    .chip-choice.selected { background: var(--lime); border-color: transparent; color: var(--ink); font-weight: 600; }
+
+    .segmented { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: #f1f4ec; }
+    .segmented label {
+      position: relative; flex: 1; padding: 8px 6px; border-radius: 9px; text-align: center;
+      color: var(--muted); font-size: 11px; font-weight: 500; cursor: pointer;
+    }
+    .segmented label:has(input:checked) { background: var(--card); color: var(--text); font-weight: 600; box-shadow: 0 2px 7px -3px rgba(11, 26, 20, .22); }
+    .segmented input { position: absolute; opacity: 0; pointer-events: none; }
+    .segmented label:focus-within { outline: 2px solid #8ebc63; outline-offset: 1px; }
+
+    .linked-box {
+      display: flex; gap: 8px; align-items: flex-start; margin-top: 14px; padding: 10px 11px;
+      border-radius: 11px; background: #f6faf2; color: #4f6257; font-size: 10px; line-height: 1.5;
+    }
+    .linked-box svg { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 1px; color: var(--green-dark); }
+    .linked-box strong { color: var(--text); }
+
+    /* Detail sheet content */
+    .detail-section { padding: 18px 0; border-bottom: 1px solid var(--border); }
+    .detail-section:last-child { border-bottom: 0; }
+    .section-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .section-top h3 { margin: 0; font: 600 13px var(--display); letter-spacing: -.01em; }
+    .section-top .helper { margin: 0; }
+    .detail-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+    .detail-stat { min-width: 0; padding: 12px; border-radius: 13px; background: #f7f9f3; }
+    .detail-stat span { display: block; color: var(--muted); font-size: 9px; line-height: 1.35; }
+    .detail-stat strong { display: block; margin-top: 6px; font: 600 18px/1.05 var(--display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .detail-stat strong.small-value { font-size: 15px; }
+    .capital-panel { margin-top: 10px; padding: 13px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+    .capital-panel .capital-head { font-size: 11px; }
+    .capital-panel .capital-head strong { font-size: 12px; }
+    .capital-panel .progress { height: 7px; margin-top: 9px; }
+    .capital-panel .capital-sub { margin-top: 8px; font-size: 10px; }
+    .target-line { margin: 9px 0 0; color: var(--muted); font-size: 10px; }
+    .paused-banner {
+      display: flex; gap: 8px; align-items: flex-start; margin-bottom: 11px; padding: 10px 11px;
+      border-radius: 11px; background: #f1f3ed; color: #5e6a63; font-size: 10px; line-height: 1.5;
+    }
+    .paused-banner svg { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 1px; }
+
+    .milestone-list { display: grid; gap: 7px; }
+    .milestone-row {
+      display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+      padding: 10px 11px; border: 1px solid transparent; border-radius: 12px;
+    }
+    .milestone-row.next { background: #f6faf2; border-color: #dbe8d8; }
+    .milestone-row.done { opacity: .82; }
+    .milestone-step {
+      width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%;
+      background: #eef0ea; color: var(--muted); font-size: 10px; font-weight: 600;
+    }
+    .milestone-step svg { width: 11px; height: 11px; }
+    .milestone-row.done .milestone-step { background: var(--green-soft); color: var(--green-dark); }
+    .milestone-row.next .milestone-step { background: var(--lime); color: var(--ink); }
+    .milestone-copy { min-width: 0; }
+    .milestone-copy strong { display: block; font-size: 12px; line-height: 1.4; }
+    .milestone-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .milestone-row.done .milestone-copy strong { color: var(--muted); }
+    .milestone-status { color: var(--muted); font-size: 10px; white-space: nowrap; }
+    .milestone-row .btn.small { min-height: 28px; padding: 4px 9px; font-size: 10px; }
+    .milestone-form { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .milestone-form .form-grid { gap: 8px; }
+    .milestone-form .field { margin-bottom: 9px; }
+    .milestone-form input { min-height: 38px !important; }
+
+    .quick-log-group { display: flex; gap: 5px; flex-wrap: wrap; }
+    .quick-log-group .btn { font-size: 10px; min-height: 28px; padding: 4px 9px; }
+    .linked-note { display: flex; align-items: center; gap: 5px; margin: 0 0 4px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .linked-note svg { width: 11px; height: 11px; flex: 0 0 auto; }
+    .detail-entries .entry { grid-template-columns: 62px minmax(0, 1fr) auto; padding: 10px 0; }
+    .detail-entries .entry-main strong { font-size: 11px; }
+    .detail-entries .entry-amount { font-size: 11px; }
+    .detail-empty { padding: 16px 14px; border-radius: 12px; background: #f7f9f3; color: var(--muted); font-size: 11px; line-height: 1.55; text-align: center; }
+
+    .settings-form { padding: 13px; border: 1px solid var(--border); border-radius: 14px; background: #fbfcf8; }
+    .settings-form h3 { margin: 0 0 12px; font: 600 13px var(--display); }
+    .settings-form .form-grid { gap: 9px; }
+    .settings-form .field { margin-bottom: 10px; }
+    .settings-form .field input, .settings-form .field textarea { background: var(--card); }
+    .settings-form .field textarea { min-height: 58px; }
+    .save-row { display: flex; justify-content: flex-end; margin-top: 2px; }
+
+    /* All activity */
+    .all-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }
+    .all-summary div { padding: 11px 12px; border-radius: 12px; background: #f7f9f3; }
+    .all-summary span { display: block; color: var(--muted); font-size: 9px; }
+    .all-summary strong { display: block; margin-top: 5px; font: 600 15px var(--display); font-variant-numeric: tabular-nums; }
+    .all-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .all-row:last-child { border-bottom: 0; }
+    .all-asset { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; color: var(--muted); font-size: 9px; }
+    .all-asset svg { width: 10px; height: 10px; }
+    .all-foot { margin: 14px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+
+    .toast {
+      position: fixed; z-index: 100; left: 50%; bottom: 24px; transform: translate(-50%, 18px);
+      max-width: min(420px, calc(100% - 32px)); padding: 11px 16px; border-radius: 12px;
+      background: var(--forest); color: #fff; font-size: 12px; line-height: 1.4;
+      box-shadow: 0 18px 40px -20px rgba(11, 26, 20, .7);
+      opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    :focus-visible { outline: 3px solid #5b9a6d; outline-offset: 3px; }
+    .chip-choice:focus-visible, .filter-btn:focus-visible, .segmented label:focus-within { outline: 3px solid #8ebc63; outline-offset: 2px; }
+
+    @keyframes sheet-in { from { transform: translateX(28px); opacity: .4; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes modal-in { from { transform: translateY(10px) scale(.985); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+    @media (max-width: 1050px) {
+      .overview { grid-template-columns: 1.15fr 1fr 1fr; }
+      .overview .metric:last-child { grid-column: span 3; min-height: auto; }
+    }
+    @media (max-width: 980px) {
+      main { padding: 27px 25px 48px; }
+      .overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .overview .metric:last-child { grid-column: auto; min-height: 119px; }
+      .asset-grid { grid-template-columns: 1fr; }
+      .model-strip { grid-template-columns: 1fr; gap: 14px; }
+    }
+    @media (max-width: 680px) {
+      .rail {
+        inset: auto 0 0; width: auto; height: 66px; padding: 7px 13px; flex-direction: row;
+        justify-content: center; border-right: 0; border-top: 1px solid var(--border);
+        background: rgba(255, 255, 255, .9);
+      }
+      .brand-mark, .rail-spacer, .avatar { display: none; }
+      .rail-nav { display: flex; justify-content: space-around; width: min(100%, 420px); }
+      .rail-link { width: 46px; height: 46px; }
+      main { width: 100%; margin: 0; padding: 24px 16px 92px; }
+      .topbar { align-items: flex-start; margin-bottom: 20px; }
+      .page-head p { max-width: 300px; line-height: 1.5; }
+      .header-actions { width: 100%; justify-content: space-between; }
+      .period-select { flex: 1; max-width: 175px; }
+      .overview { gap: 10px; margin-bottom: 22px; }
+      .metric { min-height: 102px; padding: 14px; border-radius: 18px; }
+      .metric-value { font-size: 22px; }
+      .metric-label { margin-bottom: 10px; font-size: 11px; }
+      .metric-foot { margin-top: 8px; font-size: 10px; }
+      .section-heading { align-items: flex-start; }
+      .section-heading p { line-height: 1.5; }
+      .asset-top { padding: 22px 18px 17px; }
+      .asset-title h3 { font-size: 19px; }
+      .journey { padding: 14px 18px; }
+      .asset-stats { padding: 20px 18px 18px; gap: 6px; }
+      .asset-stat + .asset-stat { padding-left: 9px; }
+      .asset-stat span { font-size: 10px; }
+      .asset-stat strong { font-size: 23px; }
+      .asset-stat strong.small-value { font-size: 20px; }
+      .pre-revenue { margin-inline: 18px; }
+      .capital { padding: 0 18px 18px; }
+      .milestone-peek { margin: 0 18px 18px; }
+      .card-activity { padding: 12px 18px 4px; }
+      .card-foot { padding: 13px 18px; }
+      .card-collapsed-summary { padding: 12px 18px 17px; }
+      .collapsed-net strong { font-size: 21px; }
+      .sheet-dialog { width: 100%; max-width: 100%; height: 100dvh; border-radius: 0; }
+      .sheet-head { padding: 15px 16px 14px; }
+      .sheet-body { padding: 2px 16px 30px; }
+      .modal-dialog { max-height: 92dvh; border-radius: 20px; }
+      .modal-inner { max-height: 92dvh; }
+      .modal-head { padding: 18px 17px 14px; }
+      .modal-body { padding: 15px 17px; }
+      .modal-foot { padding: 11px 17px 15px; }
+      .form-grid, .choice-grid { grid-template-columns: 1fr; }
+      .detail-stats { gap: 5px; }
+      .detail-stat { padding: 10px; }
+      .detail-stat strong { font-size: 16px; }
+      .detail-stat strong.small-value { font-size: 13px; }
+      .section-top { align-items: flex-start; flex-wrap: wrap; }
+      .quick-log-group { width: 100%; }
+      .quick-log-group .btn { flex: 1; }
+      .all-summary div { padding: 9px; }
+      .all-summary strong { font-size: 13px; }
+      .toast { bottom: 82px; }
+      .concept-note { text-align: left; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="rail" aria-label="Concept navigation">
+      <div class="brand-mark" aria-label="Walnut concept">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><path d="M12 3.1c-1.4 0-2.5.7-3.1 1.8-1.4-.1-2.7.8-3.1 2.2-1.4.5-2.1 2-1.7 3.4-1 1.1-1.1 2.7-.1 3.9-.3 1.5.5 2.9 1.9 3.3.6 1.4 2.1 2.1 3.5 1.7.8 1.1 2.3 1.4 3.6.7 1.3.7 2.8.4 3.6-.7 1.4.4 2.9-.3 3.5-1.7 1.4-.4 2.2-1.8 1.9-3.3 1-1.2.9-2.8-.1-3.9.4-1.4-.3-2.9-1.7-3.4-.4-1.4-1.7-2.3-3.1-2.2-.6-1.1-1.7-1.8-3.1-1.8Z" fill="currentColor"/><path d="M12 5.5v13M8.4 8.2c1.9.7 3 2.1 3.6 4.1m3.6-4.1c-1.9.7-3 2.1-3.6 4.1m-5.4 1.2c1.9-.4 3.7.2 5.4 1.7m5.4-1.7c-1.9-.4-3.7.2-5.4 1.7" stroke="#0e3b2a" stroke-width="1.15" stroke-linecap="round"/></svg>
+      </div>
+      <nav class="rail-nav" aria-label="Main">
+        <a class="rail-link" href="#overview" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg></a>
+        <a class="rail-link" href="#assets" aria-label="Activity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h13m0 0-3-3m3 3-3 3M17 17H4m0 0 3-3m-3 3 3 3"/></svg></a>
+        <a class="rail-link" href="#assets" aria-label="Loans"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.3-3.2 2.4-5 6-5 2.3 0 4 .8 5 2.4M16 6.5h5m-2.5-2.5v5m-2 7.2c.6-.8 1.5-1.2 2.7-1.2 2 0 3.3 1.2 3.5 3.6"/></svg></a>
+        <a class="rail-link active" href="#assets" aria-label="Assets" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5h16M6.5 16V9.5m5.5 6.5V5m5.5 11v-4"/><circle cx="6.5" cy="7.5" r="1.5"/><circle cx="12" cy="3" r="1.5"/><circle cx="17.5" cy="10" r="1.5"/></svg></a>
+      </nav>
+      <div class="rail-spacer"></div><div class="avatar" aria-label="Profile">HM</div>
+    </aside>
+
+    <main>
+      <header class="topbar" id="overview">
+        <div class="page-head">
+          <h1>Assets</h1>
+          <p>Income streams &amp; ownership goals, built one step at a time.</p>
+        </div>
+        <div class="header-actions">
+          <label class="sr-only" for="month-select">Month</label>
+          <select class="period-select" id="month-select">
+            <option value="2026-11">November 2026</option>
+            <option value="2026-10">October 2026</option>
+          </select>
+          <button class="btn primary" type="button" data-action="new-asset">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            New asset
+          </button>
+        </div>
+      </header>
+
+      <section class="overview" aria-label="Asset overview for the selected month">
+        <article class="metric primary-metric">
+          <span class="metric-label">Asset net cash flow · <span class="metric-month">Nov</span></span>
+          <div class="metric-value" id="metric-net">—</div>
+          <div class="metric-foot" id="metric-net-foot">Income minus operating costs</div>
+        </article>
+        <article class="metric">
+          <span class="metric-label">Income · <span class="metric-month">Nov</span></span>
+          <div class="metric-value" id="metric-income">—</div>
+          <div class="metric-foot">Commissions and rent both count</div>
+        </article>
+        <article class="metric">
+          <span class="metric-label">Operating expenses · <span class="metric-month">Nov</span></span>
+          <div class="metric-value" id="metric-expenses">—</div>
+          <div class="metric-foot">Contributions excluded</div>
+        </article>
+        <article class="metric">
+          <span class="metric-label">Capital contributed</span>
+          <div class="metric-value" id="metric-capital">—</div>
+          <div class="metric-foot" id="metric-capital-foot">Kept separate from cash flow</div>
+        </article>
+      </section>
+
+      <section aria-labelledby="assets-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="assets-title">Your assets</h2>
+            <p>Each card keeps the build goal and its linked cash flow together.</p>
+          </div>
+          <button class="btn small quiet" type="button" data-action="all-activity">
+            All linked activity
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+          </button>
+        </div>
+        <div class="filter-bar">
+          <div class="filters" id="filters" role="group" aria-label="Filter assets"></div>
+          <span class="result-count" id="result-count"></span>
+        </div>
+        <div class="asset-grid" id="asset-grid"></div>
+      </section>
+
+      <section class="model-strip" aria-label="How asset tracking fits together">
+        <div class="model-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.2"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.2-1.2"/></svg>
+          <div><h3>One ledger, no duplicates</h3><p>Income and expenses link to existing Walnut transactions. The asset view summarizes them; it does not copy them.</p></div>
+        </div>
+        <div class="model-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5h16M6.5 16V9.5m5.5 6.5V5m5.5 11v-4"/></svg>
+          <div><h3>Cash flow is not capital</h3><p>Contributions build what you own. They stay out of operating income and expenses, so a funded goal cannot look like a loss.</p></div>
+        </div>
+        <div class="model-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.4-6.4-2.1 2.1M7.7 16.3l-2.1 2.1m12.8 0-2.1-2.1M7.7 7.7 5.6 5.6"/><circle cx="12" cy="12" r="4"/></svg>
+          <div><h3>Effort is a label</h3><p>Active, hybrid and mostly passive describe the work involved. They never decide whether income counts.</p></div>
+        </div>
+      </section>
+      <p class="concept-note">Concept only · Sample figures · Nothing is saved, synced or connected to real transactions</p>
+    </main>
+  </div>
+
+  <!-- Asset detail sheet -->
+  <dialog id="detail-dialog" class="sheet-dialog" aria-label="Asset details">
+    <div class="sheet-scroll" id="detail-content"></div>
+  </dialog>
+
+  <!-- New asset -->
+  <dialog id="asset-dialog" class="modal-dialog" aria-labelledby="asset-dialog-title">
+    <form id="asset-form" class="modal-inner">
+      <div class="modal-head">
+        <div>
+          <h2 id="asset-dialog-title">New asset</h2>
+          <p>Start with the goal. Money can be linked as it happens.</p>
+        </div>
+        <button type="button" class="icon-btn" data-close aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <label class="field">
+          <span>Name</span>
+          <input name="name" required maxlength="60" placeholder="e.g. Website sales commissions" autocomplete="off">
+        </label>
+
+        <fieldset class="field">
+          <legend>What are you building?</legend>
+          <div class="choice-grid">
+            <label class="choice">
+              <input type="radio" name="kind" value="stream" checked>
+              <span class="choice-dot" aria-hidden="true"></span>
+              <span><strong>Income stream</strong><span>Work or a venture that earns money, like commissions.</span></span>
+            </label>
+            <label class="choice">
+              <input type="radio" name="kind" value="goal">
+              <span class="choice-dot" aria-hidden="true"></span>
+              <span><strong>Ownership goal</strong><span>Something you intend to own, like a property.</span></span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <span class="field-label">Effort style <span class="optional">Optional</span></span>
+          <div class="chip-select" data-effort-group role="group" aria-label="Effort style">
+            <input type="hidden" name="effort" value="">
+            <button type="button" class="chip-choice" data-effort="active" aria-pressed="false">Active</button>
+            <button type="button" class="chip-choice" data-effort="hybrid" aria-pressed="false">Hybrid</button>
+            <button type="button" class="chip-choice" data-effort="passive" aria-pressed="false">Mostly passive</button>
+          </div>
+          <p class="helper">A description only — it never decides whether income counts.</p>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Monthly income target <span class="optional">Optional</span></span>
+            <input name="monthlyTarget" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 2500">
+          </label>
+          <label class="field">
+            <span id="capital-target-label">Launch investment target <span class="optional">Optional</span></span>
+            <input name="capitalTarget" type="number" min="0" step="1" inputmode="numeric" placeholder="e.g. 2500">
+          </label>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>First milestone <span class="optional">Optional</span></span>
+            <input name="milestone" maxlength="80" placeholder="e.g. Land the first client" autocomplete="off">
+          </label>
+          <label class="field">
+            <span>Milestone date <span class="optional">Optional</span></span>
+            <input name="milestoneDue" type="date">
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Notes <span class="optional">Optional</span></span>
+          <textarea name="notes" maxlength="240" placeholder="What does progress look like?"></textarea>
+        </label>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-close>Cancel</button>
+        <button type="submit" class="btn primary">Create asset</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Quick log -->
+  <dialog id="log-dialog" class="modal-dialog small-dialog" aria-labelledby="log-title">
+    <form id="log-form" class="modal-inner">
+      <div class="modal-head">
+        <div>
+          <h2 id="log-title">Log money</h2>
+          <p id="log-context">Linked to this asset</p>
+        </div>
+        <button type="button" class="icon-btn" data-close aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="segmented" role="radiogroup" aria-label="Entry type">
+          <label><input type="radio" name="logType" value="income" checked>Income</label>
+          <label><input type="radio" name="logType" value="expense">Operating expense</label>
+          <label><input type="radio" name="logType" value="capital">Contribution</label>
+        </div>
+        <p class="helper" id="log-helper">Adds to income and net operating cash flow.</p>
+        <label class="field">
+          <span>Amount</span>
+          <input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required>
+        </label>
+        <label class="field">
+          <span>Note <span class="optional">Optional</span></span>
+          <input name="note" maxlength="80" placeholder="e.g. Commission from bakery project" autocomplete="off">
+        </label>
+        <div class="linked-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.2"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.2-1.2"/></svg>
+          <div><strong>One entry, linked once.</strong> In the app this would point at an existing Walnut transaction, not create a second copy.</div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-close>Cancel</button>
+        <button type="submit" class="btn primary" id="log-submit">Add income</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- All linked activity -->
+  <dialog id="all-activity-dialog" class="modal-dialog" aria-labelledby="all-activity-title">
+    <div class="modal-inner">
+      <div class="modal-head">
+        <div>
+          <h2 id="all-activity-title">All linked activity</h2>
+          <p>Every asset entry for the selected month, in one place.</p>
+        </div>
+        <button type="button" class="icon-btn" data-close aria-label="Close">×</button>
+      </div>
+      <div class="modal-body" id="all-activity-content"></div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-close>Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    'use strict';
+
+    const MONTHS = {
+      '2026-11': 'November 2026',
+      '2026-10': 'October 2026',
+    };
+    const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const STAGE_LIST = [
+      { id: 'planning', label: 'Planning' },
+      { id: 'building', label: 'Building' },
+      { id: 'operating', label: 'Operating' },
+    ];
+    const EFFORT_LABEL = { active: 'Active work', hybrid: 'Hybrid', passive: 'Mostly passive' };
+    const KIND_LABEL = { stream: 'Income stream', goal: 'Ownership goal' };
+
+    const state = { filter: 'all', month: '2026-11', activeId: null, collapsed: new Set() };
+
+    const ICONS = {
+      stream: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="15" rx="2.5"/><path d="M3 8h18M7 6h.01M10 6h.01M8 13h4m-4 3h8"/></svg>',
+      goal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6M8 10h.01M16 10h.01"/></svg>',
+      chain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.2"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.2-1.2"/></svg>',
+      flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4m0 0h9l-1.5 3L14 10H5"/><path d="M5 10h9"/></svg>',
+      check: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 6 2.5 2.5L10 3"/></svg>',
+      effort: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.4-6.4-2.1 2.1M7.7 16.3l-2.1 2.1m12.8 0-2.1-2.1M7.7 7.7 5.6 5.6"/><circle cx="12" cy="12" r="4"/></svg>',
+      pause: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg>',
+      arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>',
+      plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+      chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg>',
+    };
+
+    let assets = [
+      {
+        id: 'commissions',
+        name: 'Website sales commissions',
+        subtitle: 'Agency sales · Website & e-commerce',
+        kind: 'stream',
+        effort: 'active',
+        stage: 'operating',
+        paused: false,
+        started: 'Started Mar 2026',
+        monthlyTarget: 2500,
+        capitalBase: 1350,
+        capitalTarget: 2500,
+        milestones: [
+          { id: 'cm1', text: 'Launch the service page', due: '2026-04-10', done: true },
+          { id: 'cm2', text: 'Land two retainer clients', due: '2026-12-15', done: false },
+          { id: 'cm3', text: 'Reach $3,000 in monthly commissions', due: '2027-03-31', done: false },
+        ],
+        notes: 'Agency commissions. Follow up with past clients every month.',
+        entries: [
+          { id: 'c-n1', date: '2026-11-18', title: 'Commission · E-commerce project', type: 'income', amount: 1800, linked: true },
+          { id: 'c-n2', date: '2026-11-12', title: 'Commission · Business website', type: 'income', amount: 600, linked: true },
+          { id: 'c-n3', date: '2026-11-06', title: 'Lead generation & travel', type: 'expense', amount: 720, linked: true },
+          { id: 'c-o1', date: '2026-10-24', title: 'Commission · Local bakery site', type: 'income', amount: 1200, linked: true },
+          { id: 'c-o2', date: '2026-10-09', title: 'Commission · SEO setup', type: 'income', amount: 600, linked: true },
+          { id: 'c-o3', date: '2026-10-04', title: 'Client follow-ups & travel', type: 'expense', amount: 450, linked: true },
+        ],
+      },
+      {
+        id: 'property',
+        name: 'Neighborhood retail property',
+        subtitle: 'Commercial property · Long-term goal',
+        kind: 'goal',
+        effort: 'hybrid',
+        stage: 'building',
+        paused: false,
+        started: 'Started Jan 2026',
+        target: 'Target 2028',
+        monthlyTarget: 3200,
+        capitalBase: 16500,
+        capitalTarget: 75000,
+        milestones: [
+          { id: 'pm1', text: 'Open a dedicated property fund', due: '2026-08-01', done: true },
+          { id: 'pm2', text: 'Shortlist three properties under $250k', due: '2027-01-31', done: false },
+          { id: 'pm3', text: 'Complete a site visit', due: '2027-04-30', done: false },
+        ],
+        notes: 'Save toward a small storefront; keep a repair reserve separate.',
+        entries: [
+          { id: 'p-n1', date: '2026-11-15', title: 'November property fund', type: 'capital', amount: 1000, linked: true },
+          { id: 'p-n2', date: '2026-11-08', title: 'Research & inspection travel', type: 'expense', amount: 210, linked: true },
+          { id: 'p-o1', date: '2026-10-30', title: 'October property fund', type: 'capital', amount: 1000, linked: true },
+          { id: 'p-o2', date: '2026-10-12', title: 'Inspection travel', type: 'expense', amount: 180, linked: true },
+        ],
+      },
+    ];
+
+    const esc = (value) => String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    const monthName = () => MONTHS[state.month];
+    const monthShort = () => monthName().slice(0, 3);
+
+    function fmt(value) {
+      const abs = Math.abs(Number(value) || 0);
+      const cents = Math.round(abs * 100) % 100 !== 0;
+      return '$' + abs.toLocaleString('en-US', {
+        minimumFractionDigits: cents ? 2 : 0,
+        maximumFractionDigits: 2,
+      });
+    }
+
+    function signed(value) {
+      const n = Number(value) || 0;
+      return n < 0 ? '−' + fmt(n) : fmt(n);
+    }
+
+    function shortDate(iso) {
+      const [, m, d] = iso.split('-');
+      return MONTH_SHORT[Number(m) - 1] + ' ' + Number(d);
+    }
+
+    function dueDate(iso) {
+      if (!iso) return '';
+      const [, m, d] = iso.split('-');
+      return MONTH_SHORT[Number(m) - 1] + ' ' + Number(d);
+    }
+
+    function numOrNull(value) {
+      const n = Number(value);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    }
+
+    function entriesFor(asset, month = state.month) {
+      return asset.entries
+        .filter((entry) => entry.date.startsWith(month))
+        .sort((a, b) => (a.date === b.date ? b.id.localeCompare(a.id) : b.date.localeCompare(a.date)));
+    }
+
+    function totalsFor(asset) {
+      const entries = entriesFor(asset);
+      const income = entries.filter((e) => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+      const expenses = entries.filter((e) => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+      const capital = entries.filter((e) => e.type === 'capital').reduce((sum, e) => sum + e.amount, 0);
+      return { income, expenses, capital, net: income - expenses };
+    }
+
+    function capitalTotal(asset) {
+      const added = asset.entries.filter((e) => e.type === 'capital').reduce((sum, e) => sum + e.amount, 0);
+      return asset.capitalBase + added;
+    }
+
+    function milestoneProgress(asset) {
+      const list = asset.milestones || [];
+      const done = list.filter((item) => item.done).length;
+      const nextIndex = list.findIndex((item) => !item.done);
+      return {
+        list,
+        total: list.length,
+        done,
+        nextIndex: nextIndex === -1 ? list.length : nextIndex,
+        next: nextIndex === -1 ? null : list[nextIndex],
+      };
+    }
+
+    function milestonePeekHtml(asset) {
+      const progress = milestoneProgress(asset);
+      if (!progress.total) return '';
+      if (!progress.next) {
+        return `
+          <div class="milestone-peek done">
+            ${ICONS.check}
+            <div><strong>All milestones complete</strong><small>${progress.done} of ${progress.total} steps done</small></div>
+          </div>`;
+      }
+      return `
+        <div class="milestone-peek">
+          ${ICONS.flag}
+          <div>
+            <strong>Next: ${esc(progress.next.text)}</strong>
+            <small>Step ${progress.nextIndex + 1} of ${progress.total}${progress.next.due ? ` · ${dueDate(progress.next.due)}` : ''}</small>
+          </div>
+        </div>`;
+    }
+
+    function statusOf(asset) {
+      if (asset.paused) return { label: 'Paused', cls: 'paused' };
+      const stage = STAGE_LIST.find((s) => s.id === asset.stage) || STAGE_LIST[0];
+      return { label: stage.label, cls: stage.id };
+    }
+
+    function stageIndex(asset) {
+      return Math.max(0, STAGE_LIST.findIndex((s) => s.id === asset.stage));
+    }
+
+    function stageTrack(asset, interactive) {
+      const index = stageIndex(asset);
+      const fill = index === 0 ? 0 : index === 1 ? 50 : 100;
+      return `
+        <div class="stage-track${interactive ? ' interactive' : ''}" role="group" aria-label="Build stage">
+          <span class="stage-line" aria-hidden="true"><span style="width:${fill}%"></span></span>
+          ${STAGE_LIST.map((stage, i) => {
+            const cls = i < index ? 'done' : i === index ? 'current' : '';
+            const dot = i < index ? ICONS.check : '';
+            return interactive
+              ? `<button type="button" class="stage-btn ${cls}" data-stage="${stage.id}" aria-pressed="${i === index}"><span class="stage-dot">${dot}</span><span>${stage.label}</span></button>`
+              : `<div class="stage-btn ${cls}"><span class="stage-dot">${dot}</span><span>${stage.label}</span></div>`;
+          }).join('')}
+        </div>`;
+    }
+
+    function entryTypeLabel(type) {
+      return type === 'income' ? 'Income' : type === 'expense' ? 'Operating expense' : 'Contribution';
+    }
+
+    function entryAmount(entry) {
+      if (entry.type === 'income') return `<span class="entry-amount in">+${fmt(entry.amount)}</span>`;
+      if (entry.type === 'expense') return `<span class="entry-amount out">−${fmt(entry.amount)}</span>`;
+      return `<span class="entry-amount capital" title="Capital contribution, kept out of cash flow">${fmt(entry.amount)}</span>`;
+    }
+
+    function miniEntry(entry) {
+      return `
+        <div class="entry">
+          <time class="entry-date" datetime="${entry.date}">${shortDate(entry.date)}</time>
+          <div class="entry-main">
+            <strong title="${esc(entry.title)}">${esc(entry.title)}</strong>
+            <span class="entry-kind ${entry.type}">${entryTypeLabel(entry.type)}</span>
+          </div>
+          ${entryAmount(entry)}
+        </div>`;
+    }
+
+    function cardHtml(asset) {
+      const totals = totalsFor(asset);
+      const capital = capitalTotal(asset);
+      const status = statusOf(asset);
+      const collapsed = state.collapsed.has(asset.id);
+      const month = monthShort();
+      const bodyId = `card-body-${asset.id}`;
+      const targetMet = Boolean(asset.capitalTarget && capital >= asset.capitalTarget);
+      const percent = asset.capitalTarget ? Math.min(100, Math.round((capital / asset.capitalTarget) * 100)) : 0;
+      const capitalMonth = totals.capital;
+      const netClass = totals.net < 0 ? 'negative' : totals.net > 0 ? 'positive' : '';
+      const journey = asset.stage !== 'operating'
+        ? `
+          <div class="journey">
+            <div class="journey-head"><strong>Build journey</strong><span>${asset.stage === 'building' ? 'In build' : 'Setting up'}</span></div>
+            ${stageTrack(asset, false)}
+          </div>`
+        : '';
+      const capitalLine = targetMet
+        ? `${fmt(capital)} <small>· target met</small>`
+        : `${fmt(capital)}${asset.capitalTarget ? ` <small>of ${fmt(asset.capitalTarget)}</small>` : ''}`;
+      const capitalNote = capitalMonth ? `<p class="capital-sub">${fmt(capitalMonth)} contributed in ${month}</p>` : '';
+
+      const expandedBody = `
+        ${journey}
+        <div class="asset-stats">
+          <div class="asset-stat"><span>Income · ${month}</span><strong class="${totals.income ? 'positive' : ''}">${fmt(totals.income)}</strong></div>
+          <div class="asset-stat"><span>Operating expenses · ${month}</span><strong>${fmt(totals.expenses)}</strong></div>
+          <div class="asset-stat"><span>Net cash flow · ${month}</span><strong class="${netClass} small-value">${signed(totals.net)}</strong></div>
+        </div>
+
+        <div class="capital">
+          <div class="capital-head">
+            <span>${asset.kind === 'stream' ? 'Capital invested' : 'Goal funding'}</span>
+            <strong>${capitalLine}</strong>
+          </div>
+          ${asset.capitalTarget ? `<div class="progress${asset.kind === 'goal' ? ' blue' : ''}"><span style="width:${percent}%"></span></div>` : ''}
+          ${capitalNote}
+        </div>
+
+        ${milestonePeekHtml(asset)}
+
+        <div class="card-foot">
+          <div class="foot-actions">
+            <button type="button" class="btn small primary" data-action="quick-log" data-id="${asset.id}">Log money</button>
+            <button type="button" class="btn small" data-action="open" data-id="${asset.id}">Open</button>
+          </div>
+        </div>`;
+
+      const collapsedBody = `
+        <div class="card-collapsed-summary">
+          <span class="collapsed-net"><strong class="${netClass}">${signed(totals.net)}</strong> <span>net · ${month}</span></span>
+          <span class="collapsed-flow">${fmt(totals.income)} in · ${fmt(totals.expenses)} out</span>
+        </div>`;
+
+      return `
+        <article class="asset-card${asset.paused ? ' is-paused' : ''}${collapsed ? ' is-collapsed' : ''}">
+          <div class="asset-top">
+            <div class="asset-title-row">
+              <div class="asset-identity">
+                <div class="asset-icon${asset.kind === 'goal' ? ' blue' : ''}">${ICONS[asset.kind]}</div>
+                <div class="asset-title">
+                  <div class="kind-line"><span class="kind-pill ${asset.kind}">${KIND_LABEL[asset.kind]}</span></div>
+                  <h3><button type="button" class="link-title" data-action="open" data-id="${asset.id}">${esc(asset.name)}</button></h3>
+                  <p>${esc(asset.subtitle)}</p>
+                </div>
+              </div>
+              <div class="card-controls">
+                <span class="status ${status.cls}">${status.label}</span>
+                <button
+                  type="button"
+                  class="collapse-btn"
+                  data-action="toggle-collapse"
+                  data-id="${asset.id}"
+                  aria-expanded="${!collapsed}"
+                  aria-controls="${bodyId}"
+                  aria-label="${collapsed ? 'Expand' : 'Collapse'} ${esc(asset.name)}"
+                >${ICONS.chevron}</button>
+              </div>
+            </div>
+            <div class="meta-line">
+              <span class="started">${esc(asset.started)}</span>
+            </div>
+          </div>
+          <div class="card-body" id="${bodyId}">
+            ${collapsed ? collapsedBody : expandedBody}
+          </div>
+        </article>`;
+    }
+
+    function renderOverview() {
+      const all = assets.map((asset) => totalsFor(asset));
+      const income = all.reduce((sum, t) => sum + t.income, 0);
+      const expenses = all.reduce((sum, t) => sum + t.expenses, 0);
+      const net = income - expenses;
+      const capital = assets.reduce((sum, asset) => sum + capitalTotal(asset), 0);
+      const targets = assets.reduce((sum, asset) => sum + (asset.capitalTarget || 0), 0);
+
+      document.querySelectorAll('.metric-month').forEach((el) => { el.textContent = monthShort(); });
+      document.getElementById('metric-net').textContent = signed(net);
+      document.getElementById('metric-net').className = 'metric-value ' + (net < 0 ? 'negative' : net > 0 ? 'positive' : '');
+      document.getElementById('metric-net-foot').textContent = `${assets.length} ${assets.length === 1 ? 'asset' : 'assets'} · income minus operating costs`;
+      document.getElementById('metric-income').textContent = fmt(income);
+      document.getElementById('metric-income').className = 'metric-value ' + (income > 0 ? 'positive' : '');
+      document.getElementById('metric-expenses').textContent = fmt(expenses);
+      document.getElementById('metric-expenses').className = 'metric-value ' + (expenses > 0 ? 'negative' : '');
+      document.getElementById('metric-capital').textContent = fmt(capital);
+      document.getElementById('metric-capital-foot').textContent = targets
+        ? `${Math.round((capital / targets) * 100)}% of ${fmt(targets)} in targets · separate from cash flow`
+        : 'Kept separate from cash flow';
+    }
+
+    function filteredAssets() {
+      if (state.filter === 'all') return assets;
+      return assets.filter((asset) => asset.kind === state.filter);
+    }
+
+    function renderFilters() {
+      const definitions = [
+        ['all', 'All assets'],
+        ['stream', 'Income streams'],
+        ['goal', 'Ownership goals'],
+      ];
+      document.getElementById('filters').innerHTML = definitions.map(([id, label]) => {
+        const count = id === 'all' ? assets.length : assets.filter((asset) => asset.kind === id).length;
+        return `<button type="button" class="filter-btn${state.filter === id ? ' active' : ''}" data-filter="${id}" aria-pressed="${state.filter === id}">${label}<span class="filter-count">${count}</span></button>`;
+      }).join('');
+      const shown = filteredAssets().length;
+      document.getElementById('result-count').textContent = `${shown} of ${assets.length} shown`;
+    }
+
+    function renderCards() {
+      const list = filteredAssets();
+      const grid = document.getElementById('asset-grid');
+      grid.innerHTML = list.length
+        ? list.map(cardHtml).join('')
+        : `<div class="empty-state"><h3>Nothing in this view yet</h3><p>Try another filter, or add the first asset of this type.</p><button type="button" class="btn small" data-action="reset-filter">Show all assets</button></div>`;
+    }
+
+    function renderPage() {
+      renderOverview();
+      renderFilters();
+      renderCards();
+    }
+
+    function renderDetail() {
+      const asset = assets.find((item) => item.id === state.activeId);
+      const container = document.getElementById('detail-content');
+      if (!asset || !container) return;
+
+      const scrollTop = container.scrollTop;
+      const totals = totalsFor(asset);
+      const capital = capitalTotal(asset);
+      const status = statusOf(asset);
+      const entries = entriesFor(asset);
+      const percent = asset.capitalTarget ? Math.min(100, Math.round((capital / asset.capitalTarget) * 100)) : 0;
+      const milestoneInfo = milestoneProgress(asset);
+      const capitalLabel = asset.kind === 'stream' ? 'Capital invested' : 'Goal funding';
+
+      container.innerHTML = `
+        <div class="sheet-head">
+          <div class="sheet-top">
+            <span class="kind-pill ${asset.kind}">${KIND_LABEL[asset.kind]}</span>
+            <button type="button" class="icon-btn" data-close aria-label="Close details">×</button>
+          </div>
+          <div class="asset-identity">
+            <div class="asset-icon${asset.kind === 'goal' ? ' blue' : ''}">${ICONS[asset.kind]}</div>
+            <div class="asset-title">
+              <h2>${esc(asset.name)}</h2>
+              <p>${esc(asset.subtitle)}</p>
+            </div>
+          </div>
+          <div class="meta-line">
+            <span class="status ${status.cls}">${status.label}</span>
+            ${asset.effort ? `<span class="effort">${ICONS.effort}${EFFORT_LABEL[asset.effort]}</span>` : ''}
+            <span class="started">${esc(asset.started)}</span>
+            ${asset.target ? `<span class="started">${esc(asset.target)}</span>` : ''}
+          </div>
+        </div>
+
+        <div class="sheet-body">
+          <section class="detail-section">
+            <div class="section-top">
+              <h3>Build stage</h3>
+              <button type="button" class="btn small" data-action="toggle-pause" data-id="${asset.id}">${asset.paused ? 'Resume' : 'Pause'}</button>
+            </div>
+            ${asset.paused ? `<div class="paused-banner">${ICONS.pause}<span><strong>Paused.</strong> Its history and every linked entry stay exactly where they are.</span></div>` : ''}
+            ${stageTrack(asset, true)}
+            <p class="helper">Move the asset as it changes. Operating does not mean finished — it means it is running.</p>
+          </section>
+
+          <section class="detail-section">
+            <div class="section-top"><h3>${monthName()}</h3><span class="helper">Linked activity</span></div>
+            <div class="detail-stats">
+              <div class="detail-stat"><span>Income</span><strong class="${totals.income > 0 ? 'positive' : ''}">${fmt(totals.income)}</strong></div>
+              <div class="detail-stat"><span>Operating expenses</span><strong class="${totals.expenses > 0 ? 'negative' : ''}">${fmt(totals.expenses)}</strong></div>
+              <div class="detail-stat"><span>Net cash flow</span><strong class="${totals.net < 0 ? 'negative' : totals.net > 0 ? 'positive' : ''} small-value">${signed(totals.net)}</strong></div>
+            </div>
+            <div class="capital-panel">
+              <div class="capital-head">
+                <span>${capitalLabel}</span>
+                <strong>${fmt(capital)}${asset.capitalTarget ? ` <small>of ${fmt(asset.capitalTarget)}</small>` : ''}</strong>
+              </div>
+              ${asset.capitalTarget ? `<div class="progress${asset.kind === 'goal' ? ' blue' : ''}"><span style="width:${percent}%"></span></div>` : ''}
+              <p class="capital-sub">${totals.capital ? `${fmt(totals.capital)} added in ${monthName()}. ` : ''}Contributions build capital; they are deliberately left out of operating cash flow.</p>
+              ${asset.monthlyTarget ? `<p class="target-line">Income target ${fmt(asset.monthlyTarget)} / month · a target, not a forecast.</p>` : ''}
+            </div>
+          </section>
+
+          <section class="detail-section">
+            <div class="section-top">
+              <h3>Milestones</h3>
+              <span class="helper">${milestoneInfo.total ? `${milestoneInfo.done} of ${milestoneInfo.total} complete` : 'Add your first step'}</span>
+            </div>
+            ${milestoneInfo.total ? `
+              <div class="milestone-list">
+                ${milestoneInfo.list.map((item, index) => {
+                  const isNext = !item.done && index === milestoneInfo.nextIndex;
+                  return `
+                    <div class="milestone-row${item.done ? ' done' : ''}${isNext ? ' next' : ''}">
+                      <span class="milestone-step">${item.done ? ICONS.check : index + 1}</span>
+                      <div class="milestone-copy">
+                        <strong>${esc(item.text)}</strong>
+                        <span>${item.done ? 'Completed' : item.due ? `Due ${dueDate(item.due)}` : 'No date set'}${isNext ? ' · Next step' : ''}</span>
+                      </div>
+                      ${isNext
+                        ? `<button type="button" class="btn small" data-action="complete-milestone" data-id="${asset.id}">Mark complete</button>`
+                        : item.done ? '' : '<span class="milestone-status">Upcoming</span>'}
+                    </div>`;
+                }).join('')}
+              </div>` : `<div class="detail-empty">No milestones yet. Add a concrete step below.</div>`}
+            <form id="milestone-form" class="milestone-form">
+              <div class="form-grid">
+                <label class="field"><span>${milestoneInfo.total ? 'Add another milestone' : 'First milestone'}</span><input name="text" required maxlength="80" placeholder="e.g. Shortlist three properties" autocomplete="off"></label>
+                <label class="field"><span>Date <span class="optional">Optional</span></span><input name="due" type="date"></label>
+              </div>
+              <div class="save-row"><button class="btn small primary" type="submit">${milestoneInfo.total ? 'Add milestone' : 'Add first milestone'}</button></div>
+            </form>
+          </section>
+
+          <section class="detail-section">
+            <div class="section-top"><h3>${monthName()} activity</h3><span class="helper">${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}</span></div>
+            <div class="quick-log-group" style="margin-bottom:8px">
+              <button type="button" class="btn small" data-action="log" data-id="${asset.id}" data-type="income">+ Income</button>
+              <button type="button" class="btn small" data-action="log" data-id="${asset.id}" data-type="expense">+ Expense</button>
+              <button type="button" class="btn small" data-action="log" data-id="${asset.id}" data-type="capital">+ Contribution</button>
+            </div>
+            <p class="linked-note">${ICONS.chain}Linked to existing Walnut entries — summarized here, never duplicated.</p>
+            <div class="detail-entries">
+              ${entries.length ? entries.map((entry) => `
+                <div class="entry">
+                  <time class="entry-date" datetime="${entry.date}">${shortDate(entry.date)}</time>
+                  <div class="entry-main"><strong title="${esc(entry.title)}">${esc(entry.title)}</strong><span class="entry-kind ${entry.type}">${entryTypeLabel(entry.type)}</span></div>
+                  <span class="entry-right"><span class="entry-link" title="Linked to a Walnut transaction">${ICONS.chain}</span>${entryAmount(entry)}</span>
+                </div>`).join('') : `<div class="detail-empty">No linked activity in ${monthName()}. A quiet month does not reset progress.</div>`}
+            </div>
+          </section>
+
+          <section class="detail-section">
+            <form id="details-form" class="settings-form">
+              <h3>Asset details</h3>
+              <div class="field">
+                <span class="field-label">Effort style <span class="optional">Optional</span></span>
+                <div class="chip-select" data-effort-group role="group" aria-label="Effort style">
+                  <input type="hidden" name="effort" value="${asset.effort || ''}">
+                  <button type="button" class="chip-choice${asset.effort === 'active' ? ' selected' : ''}" data-effort="active" aria-pressed="${asset.effort === 'active'}">Active</button>
+                  <button type="button" class="chip-choice${asset.effort === 'hybrid' ? ' selected' : ''}" data-effort="hybrid" aria-pressed="${asset.effort === 'hybrid'}">Hybrid</button>
+                  <button type="button" class="chip-choice${asset.effort === 'passive' ? ' selected' : ''}" data-effort="passive" aria-pressed="${asset.effort === 'passive'}">Mostly passive</button>
+                </div>
+                <p class="helper">Descriptive only — active commissions and passive rent are both real income.</p>
+              </div>
+              <div class="form-grid">
+                <label class="field"><span>Monthly income target <span class="optional">Optional</span></span><input name="monthlyTarget" type="number" min="0" step="1" inputmode="numeric" value="${asset.monthlyTarget ?? ''}" placeholder="e.g. 2500"></label>
+                <label class="field"><span>${asset.kind === 'stream' ? 'Launch investment target' : 'Funding target'} <span class="optional">Optional</span></span><input name="capitalTarget" type="number" min="0" step="1" inputmode="numeric" value="${asset.capitalTarget ?? ''}" placeholder="${asset.kind === 'stream' ? 'e.g. 2500' : 'e.g. 75000'}"></label>
+              </div>
+              <label class="field"><span>Notes <span class="optional">Optional</span></span><textarea name="notes" maxlength="240" placeholder="What does progress look like?">${esc(asset.notes)}</textarea></label>
+              <div class="save-row"><button class="btn small primary" type="submit">Save details</button></div>
+            </form>
+          </section>
+        </div>`;
+
+      container.scrollTop = scrollTop;
+    }
+
+    function renderAllActivity() {
+      const content = document.getElementById('all-activity-content');
+      if (!content) return;
+      const rows = assets
+        .flatMap((asset) => entriesFor(asset).map((entry) => ({ entry, asset })))
+        .sort((a, b) => (a.entry.date === b.entry.date ? b.entry.id.localeCompare(a.entry.id) : b.entry.date.localeCompare(a.entry.date)));
+      const income = rows.filter(({ entry }) => entry.type === 'income').reduce((sum, { entry }) => sum + entry.amount, 0);
+      const expenses = rows.filter(({ entry }) => entry.type === 'expense').reduce((sum, { entry }) => sum + entry.amount, 0);
+      const capital = rows.filter(({ entry }) => entry.type === 'capital').reduce((sum, { entry }) => sum + entry.amount, 0);
+
+      content.innerHTML = `
+        <div class="section-top"><h3>${monthName()}</h3><span class="helper">${rows.length} ${rows.length === 1 ? 'linked entry' : 'linked entries'}</span></div>
+        <div class="all-summary">
+          <div><span>Income</span><strong class="positive">${fmt(income)}</strong></div>
+          <div><span>Operating expenses</span><strong>${fmt(expenses)}</strong></div>
+          <div><span>Contributions</span><strong class="blue-text">${fmt(capital)}</strong></div>
+        </div>
+        ${rows.length ? rows.map(({ entry, asset }) => `
+          <div class="all-row">
+            <time class="entry-date" datetime="${entry.date}">${shortDate(entry.date)}</time>
+            <div class="entry-main">
+              <strong title="${esc(entry.title)}">${esc(entry.title)}</strong>
+              <span class="entry-kind ${entry.type}">${entryTypeLabel(entry.type)}</span>
+              <div class="all-asset">${ICONS.chain}${esc(asset.name)}</div>
+            </div>
+            ${entryAmount(entry)}
+          </div>`).join('') : `<div class="detail-empty">No linked activity in ${monthName()}. A quiet month does not change the goals.</div>`}
+        <p class="all-foot"><strong>One ledger.</strong> Income and operating expenses affect cash flow. Contributions build capital and are excluded from it. Every row is a link to an existing transaction, not a copy.</p>`;
+    }
+
+    const detailDialog = document.getElementById('detail-dialog');
+    const assetDialog = document.getElementById('asset-dialog');
+    const logDialog = document.getElementById('log-dialog');
+    const allActivityDialog = document.getElementById('all-activity-dialog');
+    let logAssetId = null;
+    let toastTimer = null;
+
+    function toast(message) {
+      const el = document.getElementById('toast');
+      el.textContent = message;
+      el.classList.add('show');
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => el.classList.remove('show'), 3400);
+    }
+
+    function showDialog(dialog) {
+      dialog.dataset.openedAt = String(Date.now());
+      if (!dialog.open) dialog.showModal();
+    }
+
+    function openDetail(id) {
+      state.activeId = id;
+      renderDetail();
+      showDialog(detailDialog);
+    }
+
+    function openNewAsset() {
+      const form = document.getElementById('asset-form');
+      form.reset();
+      form.querySelectorAll('.chip-choice').forEach((chip) => {
+        chip.classList.remove('selected');
+        chip.setAttribute('aria-pressed', 'false');
+      });
+      form.elements.effort.value = '';
+      updateKindLabels();
+      showDialog(assetDialog);
+      window.setTimeout(() => form.elements.name.focus(), 50);
+    }
+
+    function updateKindLabels() {
+      const form = document.getElementById('asset-form');
+      const kind = form.querySelector('input[name="kind"]:checked')?.value || 'stream';
+      const label = document.getElementById('capital-target-label');
+      label.innerHTML = kind === 'goal'
+        ? 'Funding target <span class="optional">Optional</span>'
+        : 'Launch investment target <span class="optional">Optional</span>';
+      form.elements.capitalTarget.placeholder = kind === 'goal' ? 'e.g. 75000' : 'e.g. 2500';
+    }
+
+    function openLog(assetId, type) {
+      const asset = assets.find((item) => item.id === assetId);
+      if (!asset) return;
+      logAssetId = assetId;
+      const form = document.getElementById('log-form');
+      form.reset();
+      const radio = form.querySelector(`input[name="logType"][value="${type}"]`);
+      if (radio) radio.checked = true;
+      document.getElementById('log-context').textContent = `${asset.name} · ${monthName()}`;
+      updateLogHelp();
+      showDialog(logDialog);
+      window.setTimeout(() => form.elements.amount.focus(), 50);
+    }
+
+    function updateLogHelp() {
+      const type = document.querySelector('#log-form input[name="logType"]:checked')?.value || 'income';
+      const helper = document.getElementById('log-helper');
+      const submit = document.getElementById('log-submit');
+      if (type === 'income') {
+        helper.innerHTML = '<strong>Counts once.</strong> Adds to income and net operating cash flow.';
+        submit.textContent = 'Add income';
+      } else if (type === 'expense') {
+        helper.innerHTML = '<strong>Counts once.</strong> Reduces net operating cash flow; contributions stay separate.';
+        submit.textContent = 'Add expense';
+      } else {
+        helper.innerHTML = '<strong>Leaves cash flow alone.</strong> Adds to capital invested or goal funding.';
+        submit.textContent = 'Add contribution';
+      }
+    }
+
+    function createAsset(form) {
+      const data = new FormData(form);
+      const name = String(data.get('name') || '').trim();
+      if (!name) {
+        form.elements.name.reportValidity();
+        return;
+      }
+      const kind = data.get('kind') === 'goal' ? 'goal' : 'stream';
+      const milestoneText = String(data.get('milestone') || '').trim();
+      const asset = {
+        id: 'asset-' + Date.now(),
+        name,
+        subtitle: kind === 'goal' ? 'Ownership goal · Just added' : 'Income stream · Just added',
+        kind,
+        effort: String(data.get('effort') || ''),
+        stage: 'planning',
+        paused: false,
+        started: 'Started ' + monthShort() + ' ' + state.month.slice(0, 4),
+        monthlyTarget: numOrNull(data.get('monthlyTarget')),
+        capitalBase: 0,
+        capitalTarget: numOrNull(data.get('capitalTarget')),
+        milestones: milestoneText
+          ? [{ id: 'ms-' + Date.now(), text: milestoneText, due: String(data.get('milestoneDue') || '') || null, done: false }]
+          : [],
+        notes: String(data.get('notes') || '').trim(),
+        entries: [],
+      };
+      assets.unshift(asset);
+      state.filter = 'all';
+      assetDialog.close();
+      renderPage();
+      toast('Asset created. Link its first entry when you are ready.');
+      openDetail(asset.id);
+    }
+
+    function addEntry(form) {
+      const data = new FormData(form);
+      const amount = Number(data.get('amount'));
+      if (!Number.isFinite(amount) || amount <= 0) {
+        form.elements.amount.reportValidity();
+        return;
+      }
+      const asset = assets.find((item) => item.id === logAssetId);
+      if (!asset) return;
+      const type = data.get('logType') === 'expense' ? 'expense' : data.get('logType') === 'capital' ? 'capital' : 'income';
+      const note = String(data.get('note') || '').trim();
+      const fallback = type === 'income'
+        ? (asset.kind === 'stream' ? 'Commission income' : 'Income')
+        : type === 'expense'
+          ? 'Operating expense'
+          : 'Capital contribution';
+      asset.entries.push({
+        id: 'entry-' + Date.now(),
+        date: `${state.month}-20`,
+        title: note || fallback,
+        type,
+        amount: Math.round(amount * 100) / 100,
+        linked: true,
+      });
+      logDialog.close();
+      renderPage();
+      if (detailDialog.open) renderDetail();
+      if (allActivityDialog.open) renderAllActivity();
+      toast(type === 'income'
+        ? 'Income added and linked to this asset. It is counted once.'
+        : type === 'expense'
+          ? 'Operating expense added. It reduces cash flow once.'
+          : 'Contribution added to capital. Operating cash flow is unchanged.');
+    }
+
+    document.addEventListener('click', (event) => {
+      const closeBtn = event.target.closest('[data-close]');
+      if (closeBtn) {
+        closeBtn.closest('dialog')?.close();
+        return;
+      }
+
+      const effortChip = event.target.closest('[data-effort]');
+      if (effortChip) {
+        const group = effortChip.closest('[data-effort-group]');
+        const wasSelected = effortChip.classList.contains('selected');
+        group.querySelectorAll('[data-effort]').forEach((chip) => {
+          chip.classList.remove('selected');
+          chip.setAttribute('aria-pressed', 'false');
+        });
+        if (!wasSelected) {
+          effortChip.classList.add('selected');
+          effortChip.setAttribute('aria-pressed', 'true');
+        }
+        const hidden = group.querySelector('input[name="effort"]');
+        if (hidden) hidden.value = wasSelected ? '' : effortChip.dataset.effort;
+        return;
+      }
+
+      const stageBtn = event.target.closest('[data-stage]');
+      if (stageBtn) {
+        const asset = assets.find((item) => item.id === state.activeId);
+        if (!asset) return;
+        const wasPaused = asset.paused;
+        asset.stage = stageBtn.dataset.stage;
+        asset.paused = false;
+        renderPage();
+        renderDetail();
+        const label = STAGE_LIST.find((stage) => stage.id === asset.stage)?.label || asset.stage;
+        toast(`Moved to ${label}.${wasPaused ? ' Resumed.' : ''}`);
+        return;
+      }
+
+      const filterBtn = event.target.closest('[data-filter]');
+      if (filterBtn) {
+        state.filter = filterBtn.dataset.filter;
+        renderPage();
+        return;
+      }
+
+      const actionBtn = event.target.closest('[data-action]');
+      if (!actionBtn) return;
+      const action = actionBtn.dataset.action;
+      const id = actionBtn.dataset.id;
+      const asset = id ? assets.find((item) => item.id === id) : null;
+
+      if (action === 'new-asset') {
+        openNewAsset();
+      } else if (action === 'open' && asset) {
+        openDetail(asset.id);
+      } else if (action === 'quick-log' && asset) {
+        openLog(asset.id, asset.kind === 'goal' ? 'capital' : 'income');
+      } else if (action === 'log' && asset) {
+        openLog(asset.id, actionBtn.dataset.type || 'income');
+      } else if (action === 'all-activity') {
+        renderAllActivity();
+        showDialog(allActivityDialog);
+      } else if (action === 'reset-filter') {
+        state.filter = 'all';
+        renderPage();
+      } else if (action === 'toggle-collapse' && asset) {
+        if (state.collapsed.has(asset.id)) state.collapsed.delete(asset.id);
+        else state.collapsed.add(asset.id);
+        renderPage();
+      } else if (action === 'toggle-pause' && asset) {
+        asset.paused = !asset.paused;
+        renderPage();
+        renderDetail();
+        toast(asset.paused
+          ? 'Paused. Every linked entry and its history stay.'
+          : 'Resumed. History is unchanged.');
+      } else if (action === 'complete-milestone' && asset) {
+        const next = (asset.milestones || []).find((item) => !item.done);
+        if (!next) return;
+        next.done = true;
+        renderPage();
+        renderDetail();
+        const following = (asset.milestones || []).find((item) => !item.done);
+        toast(following ? `Milestone complete. Next: ${following.text}` : 'All milestones complete.');
+      }
+    });
+
+    document.addEventListener('change', (event) => {
+      if (event.target.id === 'month-select') {
+        state.month = event.target.value;
+        renderPage();
+        if (detailDialog.open) renderDetail();
+        if (allActivityDialog.open) renderAllActivity();
+        return;
+      }
+      if (event.target.name === 'kind' && event.target.closest('#asset-form')) {
+        updateKindLabels();
+        return;
+      }
+      if (event.target.name === 'logType') updateLogHelp();
+    });
+
+    document.addEventListener('submit', (event) => {
+      const form = event.target;
+      if (form.id === 'asset-form') {
+        event.preventDefault();
+        createAsset(form);
+      } else if (form.id === 'log-form') {
+        event.preventDefault();
+        addEntry(form);
+      } else if (form.id === 'details-form') {
+        event.preventDefault();
+        const asset = assets.find((item) => item.id === state.activeId);
+        if (!asset) return;
+        const data = new FormData(form);
+        asset.effort = String(data.get('effort') || '');
+        asset.monthlyTarget = numOrNull(data.get('monthlyTarget'));
+        asset.capitalTarget = numOrNull(data.get('capitalTarget'));
+        asset.notes = String(data.get('notes') || '').trim();
+        renderPage();
+        renderDetail();
+        toast('Asset details saved.');
+      } else if (form.id === 'milestone-form') {
+        event.preventDefault();
+        const asset = assets.find((item) => item.id === state.activeId);
+        if (!asset) return;
+        const data = new FormData(form);
+        const text = String(data.get('text') || '').trim();
+        if (!text) return;
+        asset.milestones = asset.milestones || [];
+        asset.milestones.push({
+          id: 'ms-' + Date.now(),
+          text,
+          due: String(data.get('due') || '') || null,
+          done: false,
+        });
+        renderPage();
+        renderDetail();
+        toast(`Milestone added as step ${asset.milestones.length}.`);
+        window.setTimeout(() => document.querySelector('#milestone-form input[name="text"]')?.focus(), 40);
+      }
+    });
+
+    [detailDialog, assetDialog, logDialog, allActivityDialog].forEach((dialog) => {
+      dialog.addEventListener('click', (event) => {
+        if (event.target !== dialog) return;
+        const openedAt = Number(dialog.dataset.openedAt || 0);
+        if (Date.now() - openedAt > 250) dialog.close();
+      });
+    });
+
+    detailDialog.addEventListener('close', () => { state.activeId = null; });
+
+    renderPage();
+  </script>
+</body>
+</html>

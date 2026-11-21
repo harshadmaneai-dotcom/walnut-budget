@@ -5,6 +5,9 @@ export type IconName =
   | 'swap'
   | 'users'
   | 'chart'
+  | 'assets'
+  | 'flag'
+  | 'pause'
   | 'sliders'
   | 'plus'
   | 'arrowUp'
@@ -52,6 +55,19 @@ const ICONS: Record<IconName, ReactNode> = {
       <path d="M2.5 20h19" />
     </>
   ),
+  assets: (
+    <>
+      <path d="M4 19.5h16" />
+      <path d="M6.5 16V9.5" />
+      <path d="M12 16V5" />
+      <path d="M17.5 16v-4" />
+      <circle cx="6.5" cy="7.5" r="1.5" />
+      <circle cx="12" cy="3" r="1.5" />
+      <circle cx="17.5" cy="10" r="1.5" />
+    </>
+  ),
+  flag: <path d="M5 21V4m0 0h9l-1.5 3L14 10H5m0 0h9" />,
+  pause: <path d="M9 5v14M15 5v14" />,
   sliders: (
     <>
       <path d="M4 7h8" />

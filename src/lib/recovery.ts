@@ -18,6 +18,7 @@ export function missingEntryCount(local: AppData, remote: AppData): number {
   missing += missingIds(local.favors, remote.favors);
   missing += missingIds(local.favorPeople, remote.favorPeople);
   missing += missingIds(local.recurring, remote.recurring);
+  missing += missingIds(local.assets, remote.assets);
 
   // A loan can survive while one of its repayments disappears, which also changes balances.
   for (const localLoan of local.loans) {

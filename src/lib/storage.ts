@@ -1,6 +1,10 @@
 import type {
   Account,
   AppData,
+  Asset,
+  AssetEffort,
+  AssetKind,
+  AssetStage,
   Category,
   CategoryGroup,
   Favor,
@@ -11,7 +15,7 @@ import type {
   Transaction,
   Transfer,
 } from './types';
-import { DEFAULT_CURRENCY } from './format';
+import { DEFAULT_CURRENCY, todayISO } from './format';
 
 /** Local cache is namespaced per account, so two people on one device never share a document. */
 export const STORAGE_PREFIX = 'walnut:data';
@@ -19,7 +23,7 @@ export const STORAGE_PREFIX = 'walnut:data';
 export const LEGACY_STORAGE_KEY = 'budget-tracker:data';
 export const LEGACY_CLAIM_KEY = 'walnut:legacy-claimed';
 
-export const DATA_VERSION = 5;
+export const DATA_VERSION = 6;
 export const INVESTMENT_CATEGORY_ID = 'c-invest';
 
 export const DEFAULT_CATEGORIES: Category[] = [
@@ -50,6 +54,7 @@ export function defaultData(): AppData {
     favors: [],
     favorPeople: [],
     recurring: [],
+    assets: [],
   };
 }
 
@@ -149,12 +154,18 @@ function normalizeCategories(value: unknown): Category[] {
   return categories;
 }
 
-function normalizeTransactions(value: unknown): Transaction[] {
+function normalizeTransactions(value: unknown, assetIds = new Set<string>()): Transaction[] {
   const transactions: Transaction[] = [];
   for (const entry of asArray(value)) {
     const record = asRecord(entry);
     if (!record || typeof record.id !== 'string' || !record.id) continue;
     const createdAt = asTimestamp(record.createdAt);
+    // A link to an asset that no longer exists would make the entry invisible everywhere;
+    // keep the transaction, drop only the broken link.
+    const assetId =
+      typeof record.assetId === 'string' && assetIds.has(record.assetId) ? record.assetId : undefined;
+    const assetRole =
+      assetId && record.type !== 'income' && record.assetRole === 'capital' ? 'capital' : undefined;
     transactions.push({
       id: record.id,
       type: record.type === 'income' ? 'income' : 'expense',
@@ -165,12 +176,14 @@ function normalizeTransactions(value: unknown): Transaction[] {
       note: asText(record.note),
       recurringId: asText(record.recurringId) || undefined,
       ...(createdAt ? { createdAt } : {}),
+      ...(assetId ? { assetId } : {}),
+      ...(assetRole ? { assetRole } : {}),
     });
   }
   return transactions;
 }
 
-function normalizeTransfers(value: unknown): Transfer[] {
+function normalizeTransfers(value: unknown, assetIds = new Set<string>()): Transfer[] {
   const transfers: Transfer[] = [];
   for (const entry of asArray(value)) {
     const record = asRecord(entry);
@@ -180,6 +193,8 @@ function normalizeTransfers(value: unknown): Transfer[] {
     // A transfer needs both ends and they must be different accounts.
     if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) continue;
     const createdAt = asTimestamp(record.createdAt);
+    const assetId =
+      typeof record.assetId === 'string' && assetIds.has(record.assetId) ? record.assetId : undefined;
     transfers.push({
       id: record.id,
       fromAccountId,
@@ -188,6 +203,7 @@ function normalizeTransfers(value: unknown): Transfer[] {
       date: asText(record.date),
       note: asText(record.note),
       ...(createdAt ? { createdAt } : {}),
+      ...(assetId ? { assetId } : {}),
     });
   }
   return transfers;
@@ -308,6 +324,66 @@ function normalizeFavors(value: unknown, people: Person[]): Favor[] {
   return favors;
 }
 
+const ASSET_KINDS: AssetKind[] = ['stream', 'goal'];
+const ASSET_STAGES: AssetStage[] = ['planning', 'building', 'operating'];
+const ASSET_EFFORTS: AssetEffort[] = ['active', 'hybrid', 'passive'];
+
+function asOptionalCents(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? Math.round(value)
+    : null;
+}
+
+/** Milestones keep their order; a step without an id or text cannot be rendered. */
+function normalizeMilestones(value: unknown): Asset['milestones'] {
+  const milestones: Asset['milestones'] = [];
+  const seen = new Set<string>();
+  for (const entry of asArray(value)) {
+    const record = asRecord(entry);
+    if (!record || typeof record.id !== 'string' || !record.id || seen.has(record.id)) continue;
+    const text = asText(record.text).trim().slice(0, 80);
+    if (!text) continue;
+    seen.add(record.id);
+    milestones.push({
+      id: record.id,
+      text,
+      dueDate: isIsoDate(record.dueDate) ? record.dueDate : null,
+      done: record.done === true,
+    });
+  }
+  return milestones;
+}
+
+function normalizeAssets(value: unknown): Asset[] {
+  const assets: Asset[] = [];
+  const seen = new Set<string>();
+  for (const entry of asArray(value)) {
+    const record = asRecord(entry);
+    if (!record || typeof record.id !== 'string' || !record.id || seen.has(record.id)) continue;
+    const name = asText(record.name).trim().slice(0, 60);
+    if (!name) continue;
+    seen.add(record.id);
+    assets.push({
+      id: record.id,
+      name,
+      kind: ASSET_KINDS.includes(record.kind as AssetKind) ? (record.kind as AssetKind) : 'stream',
+      effort: ASSET_EFFORTS.includes(record.effort as AssetEffort)
+        ? (record.effort as AssetEffort)
+        : undefined,
+      stage: ASSET_STAGES.includes(record.stage as AssetStage)
+        ? (record.stage as AssetStage)
+        : 'planning',
+      paused: record.paused === true,
+      startedOn: isIsoDate(record.startedOn) ? record.startedOn : todayISO(),
+      monthlyTarget: asOptionalCents(record.monthlyTarget),
+      capitalTarget: asOptionalCents(record.capitalTarget),
+      milestones: normalizeMilestones(record.milestones),
+      notes: asText(record.notes).trim().slice(0, 240),
+    });
+  }
+  return assets;
+}
+
 function normalizeRecurring(value: unknown): RecurringRule[] {
   const rules: RecurringRule[] = [];
   for (const entry of asArray(value)) {
@@ -360,6 +436,9 @@ export function normalizeData(data: AppData): AppData {
   const settings = asRecord(source.settings) ?? {};
   const accounts = normalizeAccounts(source.accounts);
   const categories = normalizeCategories(source.categories);
+  // Assets must exist before the entries that point at them.
+  const assets = normalizeAssets(source.assets);
+  const assetIds = new Set(assets.map((asset) => asset.id));
   // People must exist before the entries that point at them.
   const favorPeople = normalizePeople(source.favorPeople, legacyFavorNames(source.favors));
   const fallback = defaultData();
@@ -373,12 +452,13 @@ export function normalizeData(data: AppData): AppData {
     // The app is unusable without at least one account and one category.
     accounts: accounts.length ? accounts : fallback.accounts,
     categories: migrateCategories(categories.length ? categories : fallback.categories),
-    transactions: normalizeTransactions(source.transactions),
-    transfers: normalizeTransfers(source.transfers),
+    transactions: normalizeTransactions(source.transactions, assetIds),
+    transfers: normalizeTransfers(source.transfers, assetIds),
     loans: normalizeLoans(source.loans),
     favors: normalizeFavors(source.favors, favorPeople),
     favorPeople,
     recurring: normalizeRecurring(source.recurring),
+    assets,
   };
 }
 
@@ -410,6 +490,7 @@ export function isBlankData(data: AppData): boolean {
     data.favors.length === 0 &&
     data.favorPeople.length === 0 &&
     data.recurring.length === 0 &&
+    data.assets.length === 0 &&
     data.accounts.every((a) => a.openingBalance === 0)
   );
 }

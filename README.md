@@ -1,6 +1,6 @@
 # Walnut
 
-A multi-user budget tracker for the browser. Every account signs in with an email and password, and keeps its own budget: spending across three groups — Needs, Expenses and Investments — plus income, accounts, loans with partial repayments and due dates, monthly category budgets, recurring entries and reports. The dashboard ring chart splits the month across the three groups.
+A multi-user budget tracker for the browser. Every account signs in with an email and password, and keeps its own budget: spending across three groups — Needs, Expenses and Investments — plus income, accounts, loans with partial repayments and due dates, monthly category budgets, recurring entries and reports. The Assets page tracks income streams and ownership goals — stages, milestones, targets and the real cash flow linked to each one. The dashboard ring chart splits the month across the three groups.
 
 Data lives in Supabase, one row per account, with a per-account `localStorage` cache for offline use. Row-level security means the publishable key shipped in the bundle can only ever reach the signed-in user's own row. While Walnut is open, it polls the row's `updated_at` every few seconds and pulls the document when another device saves, so the same account stays in sync across open devices. Writes are last-write-wins; concurrent edits are not merged.
 
@@ -117,13 +117,14 @@ The script checks the tree is clean and in sync, runs the tests, bumps `package.
 - `src/lib/auth.ts` – auth context: session, sign in, sign up, sign out, friendly error messages.
 - `src/lib/types.ts` – data model. Amounts are integer cents.
 - `src/lib/calc.ts` – pure logic: balances, loan status, monthly totals, recurring rules.
+- `src/lib/assets.ts` – asset month totals, all-time capital, milestones and linked-entry rows.
 - `src/lib/storage.ts` – per-account local cache, default data, and the one-time legacy import.
 - `src/lib/remote.ts` – per-account reads and writes to `walnut_data`.
 - `src/store.ts` – React state hook for one account; persists changes and applies recurring rules on open.
 - `src/components/AuthScreen.tsx` – sign-in / create-account screen.
 - `src/components/Logo.tsx` – the walnut mark used in the rail, auth screen and splash.
 - `public/favicon.svg`, `public/apple-touch-icon.png` – browser tab and home-screen icon.
-- `src/pages/` – Dashboard, Transactions, Loans, Reports, Settings.
+- `src/pages/` – Dashboard, Transactions, Loans, Assets, Reports, Settings.
 - `src/components/` – shared modal, forms and settings panels.
 
 ## Notes
@@ -131,5 +132,7 @@ The script checks the tree is clean and in sync, runs the tests, bumps `package.
 - Authentication is email and password only: no OAuth, magic links or phone sign-in.
 - Loan repayments recorded with an account move that balance: money out for loans you owe, money in for loans owed to you.
 - Recurring entries are created when the app opens, for each due date since the last one applied.
+- Assets live in the same per-account document as the rest of the budget (data version 6), so they sync through the existing save/poll path. A linked transaction or transfer is the same Walnut entry, never a copy: contributions build capital and stay out of the asset's operating cash flow, and deleting an asset unlinks its entries instead of deleting them.
+- The original Assets design reference is kept at `docs/assets-concept.html`; it is not part of the production bundle.
 - Every expense category belongs to Needs, Expenses or Investments. Investments are a single bucket with no subcategories, so the transaction form hides the subcategory picker for them.
 - Settings → Account shows the signed-in email and signs out. Sign-out leaves no other user's data visible, because the store and cache are keyed per account.

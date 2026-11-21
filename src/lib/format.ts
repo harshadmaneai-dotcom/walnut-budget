@@ -55,6 +55,22 @@ export function monthLabel(month: string): string {
   return new Date(`${month}-01T00:00:00`).toLocaleDateString('en-US', { month: 'short' });
 }
 
+/** Full month and year for a YYYY-MM key, e.g. "November 2026". */
+export function monthYearLabel(month: string): string {
+  return new Date(`${month}-01T00:00:00`).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+/** Short month and year for an ISO date, e.g. "Mar 2026". */
+export function formatMonthYear(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 /** Download size for the update panels, e.g. "3.4 MB". */
 export function formatMegabytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 MB';

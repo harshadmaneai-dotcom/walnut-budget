@@ -33,6 +33,10 @@ export interface Transaction {
   recurringId?: string;
   /** When the record was added. Optional on documents saved before activity ordering used it. */
   createdAt?: string;
+  /** An asset this entry is summarised under. The transaction remains the only record. */
+  assetId?: string;
+  /** A capital contribution recorded as an Investments expense, kept out of asset operating net. */
+  assetRole?: 'capital';
 }
 
 export interface Transfer {
@@ -44,6 +48,8 @@ export interface Transfer {
   note: string;
   /** When the record was added. Optional on documents saved before activity ordering used it. */
   createdAt?: string;
+  /** A transfer to a goal fund; it counts as capital for this asset. */
+  assetId?: string;
 }
 
 export interface Repayment {
@@ -106,6 +112,40 @@ export interface Settings {
   firstDayOfWeek: 0 | 1; // 0 = Sunday, 1 = Monday
 }
 
+/** Something being built for income, or something intended to be owned. */
+export type AssetKind = 'stream' | 'goal';
+/** Operating does not mean finished; it means the asset is running. */
+export type AssetStage = 'planning' | 'building' | 'operating';
+export type AssetEffort = 'active' | 'hybrid' | 'passive';
+
+export interface AssetMilestone {
+  id: string;
+  text: string;
+  dueDate: string | null;
+  done: boolean;
+}
+
+/**
+ * A goal and the cash flow linked to it. The asset owns no money of its own: entries point
+ * back at ordinary Walnut transactions and transfers, so nothing is duplicated.
+ */
+export interface Asset {
+  id: string;
+  name: string;
+  kind: AssetKind;
+  effort?: AssetEffort;
+  stage: AssetStage;
+  paused: boolean;
+  /** YYYY-MM-DD */
+  startedOn: string;
+  /** Integer cents per month; a target, never a forecast. */
+  monthlyTarget: number | null;
+  /** Integer cents. */
+  capitalTarget: number | null;
+  milestones: AssetMilestone[];
+  notes: string;
+}
+
 export interface AppData {
   version: number;
   settings: Settings;
@@ -117,4 +157,5 @@ export interface AppData {
   favors: Favor[];
   favorPeople: Person[];
   recurring: RecurringRule[];
+  assets: Asset[];
 }
